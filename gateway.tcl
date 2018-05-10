@@ -184,7 +184,6 @@ proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
 
 proc discord::gateway::disconnect { gatewayNs } {
     variable log
-    #puts $gatewayNs
     if {![namespace exists $gatewayNs]} {
         return -code error "Unknown gateway: $gatewayNs"
     }
@@ -196,7 +195,6 @@ proc discord::gateway::disconnect { gatewayNs } {
 	set msg [binary format Su 1000]
 	set msg [string range $msg 0 124];
 	::websocket::send [set ${gatewayNs}::sock] 8 $msg
-  MonitorNetwork
     return
 }
 
@@ -322,10 +320,10 @@ proc discord::gateway::GetGateway { baseUrl {cached true} args } {
         ${log}::error $token
         return -options $options $token
     }
-    #puts "discord::dateway::GetGateway \$token: $token"
+
     set ncode [::http::ncode $token]
     upvar #0 $token state
-    #puts "discord::dateway::GetGateway \$token: [parray state]"
+
     set code $state(http)       ;# HTTP/1.1 200 OK
     set body $state(body)       ;# {"url": "wss://gateway.discord.gg"}
     set status $state(status)   ;# ok
@@ -442,9 +440,7 @@ proc discord::gateway::GetGatewayInfo { sock what } {
 
 proc discord::gateway::SetGatewayInfo { sock what value } {
     variable Gateways
-    if {[dict exists $Gateways $sock]} {
-      return [set [dict get $Gateways $sock]::$what $value]
-    }
+    return [set [dict get $Gateways $sock]::$what $value]
 }
 
 # discord::gateway::CheckOp --
