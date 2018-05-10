@@ -25,6 +25,8 @@ namespace eval discord::gateway {
 
     variable log [::logger::init discord::gateway]
     ${log}::setlevel debug
+    
+    variable mode 0
 
     variable LogWsMsg 0
     variable MsgLogLevel debug
@@ -43,7 +45,7 @@ namespace eval discord::gateway {
 
     variable EventCallbacks {
         READY                       {}
-        RESUME                      {}
+        RESUMED                     {}
         CHANNEL_CREATE              {}
         CHANNEL_UPDATE              {}
         CHANNEL_DELETE              {}
@@ -71,10 +73,14 @@ namespace eval discord::gateway {
         USER_UPDATE                 {}
         VOICE_STATE_UPDATE          {}
         VOICE_SERVER_UPDATE         {}
+        
+        MESSAGE_REACTION_ADD        {}
+        MESSAGE_REACTION_REMOVE     {}
 
         MESSAGE_ACK                 {}
         CHANNEL_PINS_ACK            {}
         CHANNEL_PINS_UPDATE         {}
+        PRESENCES_REPLACE           {}
     }
 
     # Compression only used for Dispatch "READY" event. Set DefCompress to true
@@ -178,6 +184,7 @@ proc discord::gateway::connect { token {cmd {}} {shardInfo {0 1}} } {
 
 proc discord::gateway::disconnect { gatewayNs } {
     variable log
+    #puts $gatewayNs
     if {![namespace exists $gatewayNs]} {
         return -code error "Unknown gateway: $gatewayNs"
     }
@@ -189,6 +196,7 @@ proc discord::gateway::disconnect { gatewayNs } {
 	set msg [binary format Su 1000]
 	set msg [string range $msg 0 124];
 	::websocket::send [set ${gatewayNs}::sock] 8 $msg
+  MonitorNetwork
     return
 }
 
@@ -314,11 +322,13 @@ proc discord::gateway::GetGateway { baseUrl {cached true} args } {
         ${log}::error $token
         return -options $options $token
     }
+    #puts "discord::dateway::GetGateway \$token: $token"
     set ncode [::http::ncode $token]
     upvar #0 $token state
-    set code $state(http)
-    set body $state(body)
-    set status $state(status)
+    #puts "discord::dateway::GetGateway \$token: [parray state]"
+    set code $state(http)       ;# HTTP/1.1 200 OK
+    set body $state(body)       ;# {"url": "wss://gateway.discord.gg"}
+    set status $state(status)   ;# ok
     ::http::cleanup $token
     if {$status ne "ok"} {
         ${log}::error "GetGateway: $status"
@@ -425,14 +435,16 @@ proc discord::gateway::GetGatewayInfo { sock what } {
 # Arguments:
 #       sock    WebSocket object.
 #       what    Name of the gateway information to set.
-#       value   Value to the gateway inforamtion to.
+#       value   Value to the gateway information to.
 #
 # Results:
 #       Returns the gateway information.
 
 proc discord::gateway::SetGatewayInfo { sock what value } {
     variable Gateways
-    return [set [dict get $Gateways $sock]::$what $value]
+    if {[dict exists $Gateways $sock]} {
+      return [set [dict get $Gateways $sock]::$what $value]
+    }
 }
 
 # discord::gateway::CheckOp --
@@ -448,7 +460,7 @@ proc discord::gateway::SetGatewayInfo { sock what value } {
 proc discord::gateway::CheckOp { op } {
     variable log
     variable OpTokens
-    if ![dict exists $OpTokens $op] {
+    if {![dict exists $OpTokens $op]} {
         ${log}::error "op not supported: '$op'"
         return 0
     } else {
@@ -469,6 +481,7 @@ proc discord::gateway::CheckOp { op } {
 
 proc discord::gateway::EventHandler { sock msg } {
     variable log
+    variable mode
     set t [dict get $msg t]
     set s [dict get $msg s]
     set d [dict get $msg d]
@@ -485,10 +498,14 @@ proc discord::gateway::EventHandler { sock msg } {
             ::discord::gateway::Every $interval \
                     [list ::discord::gateway::Send $sock Heartbeat]
         }
-        RESUME {    ;# Not much to do here
+        RESUMED {    ;# Not much to do here
             if {[dict exists $d _trace]} {
                 SetGatewayInfo $sock _trace [dict get $d _trace]
             }
+            set interval [GetGatewayInfo $sock heartbeat_interval]
+            ::discord::gateway::Every $interval \
+                    [list ::discord::gateway::Send $sock Heartbeat]
+            set mode 0
         }
     }
     set eventCallbacks [GetGatewayInfo $sock eventCallbacks]
@@ -517,7 +534,7 @@ proc discord::gateway::EventHandler { sock msg } {
 
 proc discord::gateway::OpHandler { sock msg } {
     set op [dict get $msg op]
-    if ![CheckOp $op] {
+    if {![CheckOp $op]} {
         return 0
     }
 
@@ -534,6 +551,8 @@ proc discord::gateway::OpHandler { sock msg } {
             after idle [list discord::gateway::Send $sock Resume]
         }
         INVALID_SESSION {
+            variable mode
+            set mode 0
             after idle [list discord::gateway::Send $sock Identify]
         }
         HELLO {
@@ -595,7 +614,9 @@ proc discord::gateway::TextHandler { sock msg } {
 
 proc discord::gateway::Handler { sock type msg } {
     variable log
-    ${log}::debug "Handler: type: $type"
+    variable mode
+    variable Gateways
+    ${log}::debug "Handler: type: $type\nHandler: msg: $msg"
     switch -glob -- $type {
         text {
             after idle [list discord::gateway::TextHandler $sock $msg]
@@ -613,19 +634,36 @@ proc discord::gateway::Handler { sock type msg } {
             if {[llength $cmd] > 0} {
                 ::[lindex $cmd 0] {*}[lrange $cmd 1 end] $sock
             }
-            after idle [list discord::gateway::Send $sock Identify]
-            ${log}::notice "Handler: Connected."
+            if {$mode in [list 0 1000]} {
+                after idle [list discord::gateway::Send $sock Identify]
+                ${log}::notice "Handler: Connected."
+            } else {
+                set data [MakeResume $sock]
+                after idle [list discord::gateway::Send $sock Resume]
+                ${log}::notice "Handler: Reconnected."
+            }
         }
         close {
             ::discord::gateway::Every cancel \
                     [list ::discord::gateway::Send $sock Heartbeat]
             ${log}::notice "Handler: Connection closed."
+            ${log}::notice "Info level: [info level]"
+            set mode [lindex $msg 0]
         }
         disconnect {
             variable Gateways
-            DeleteGateway [dict get $Gateways $sock]
-            dict unset Gateways $sock
             ${log}::notice "Handler: Disconnected."
+            if {$mode in [list 1001]} {
+                set interval [GetGatewayInfo $sock heartbeat_interval]
+                set gatewayNs [dict get $Gateways $sock]
+                set sessionNs ::discord::session::[expr {
+                    $::discord::SessionId - 1
+                }]
+                after $interval [list ::discord::gateway::reconnect \
+                    $gatewayNs $sessionNs $sock]
+            } else {
+                exit
+            }
         }
         ping {      ;# Not sure if Discord uses this.
             ${log}::notice "Handler: ping: $msg"
@@ -782,6 +820,64 @@ proc discord::gateway::MakeIdentify { sock args } {
             shard $shard]
 }
 
+# discord::gateway::reconnect --
+#
+#       Create a message to resume a connection after you are disconnected from 
+#       the Gateway.
+#
+# Arguments:
+#       sock    WebSocket object.
+#
+# Results:
+#       Returns a JSON object containing the required information.
+
+proc discord::gateway::reconnect { pGatewayNs sessionNs prevSock } {
+    variable log
+    if {[catch {GetGateway $::discord::ApiBaseUrl} gateway options]} {
+        ${log}::error "connect: $gateway"
+        return -options $options $gateway
+    }
+    variable GatewayApiVersion
+    variable GatewayApiEncoding
+    append gateway "/?v=${GatewayApiVersion}&encoding=$GatewayApiEncoding"
+    ${log}::notice "connect: $gateway"
+    ${log}::debug "connect: $gateway"
+    # There might be a race condition where the Gateways dictionary doesn't get
+    # initialized with the new socket before Handler gets called.
+    if {[catch {::websocket::open $gateway ::discord::gateway::Handler} \
+            sock options]} {
+        ${log}::error "connect: $gateway: $sock"
+        set interval [GetGatewayInfo $prevSock heartbeat_interval]
+        after $interval [list ::discord::gateway::reconnect $pGatewayNs \
+          $sessionNs $prevSock]
+        return 1
+    }
+    variable Gateways
+    variable DefHeartbeatInterval
+    variable DefCompress
+    variable EventCallbacks
+    set gatewayNs [CreateGateway]
+    dict set Gateways $sock $gatewayNs
+    
+    set ${gatewayNs}::sock               $sock
+    set ${gatewayNs}::defEventCallback   [set ${pGatewayNs}::defEventCallback]
+    set ${gatewayNs}::sendCount          [set ${pGatewayNs}::sendCount]
+    set ${gatewayNs}::seq                [set ${pGatewayNs}::seq]
+    set ${gatewayNs}::session_id         [set ${pGatewayNs}::session_id]
+    set ${gatewayNs}::connectCallback    [set ${pGatewayNs}::connectCallback]
+    set ${gatewayNs}::eventCallbacks     [set ${pGatewayNs}::eventCallbacks]
+    set ${gatewayNs}::shard              [set ${pGatewayNs}::shard]
+    set ${gatewayNs}::token              [set ${pGatewayNs}::token]
+    set ${gatewayNs}::heartbeat_interval [set ${pGatewayNs}::heartbeat_interval]
+    set ${gatewayNs}::compress           [set ${pGatewayNs}::compress]
+
+    DeleteGateway [dict get $Gateways $prevSock]
+    dict unset Gateways $prevSock
+                
+    set ${sessionNs}::gatewayNs $gatewayNs
+    return 1
+}
+
 # discord::gateway::MakeResume --
 #
 #       Create a message to resume a connection after you are disconnected from 
@@ -795,9 +891,9 @@ proc discord::gateway::MakeIdentify { sock args } {
 
 proc discord::gateway::MakeResume { sock } {
     return [::json::write::object \
-            token [GetGatewayInfo $sock token] \
-            session_id [GetGatewayInfo $sock session_id] \
-            seq [GetGatewayInfo $sock seq]]
+        token [::json::write::string [GetGatewayInfo $sock token]] \
+        session_id [::json::write::string [GetGatewayInfo $sock session_id]] \
+        seq [GetGatewayInfo $sock seq]]
 }
 
 # discord::gateway::EventCallbackStub --
