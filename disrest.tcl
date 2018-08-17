@@ -29,6 +29,16 @@ namespace eval discord::rest {
     variable SendCount [dict create]
     variable BurstLimitSend 5
     variable BurstLimitPeriod 1
+    
+    set ::json::write::quotes \
+      [list "\"" "\\\"" \\ \\\\ \b \\b \f \\f \n \\n \r \\r \t \\t \
+        \x00 \\u0000 \x01 \\u0001 \x02 \\u0002 \x03 \\u0003 \
+        \x04 \\u0004 \x05 \\u0005 \x06 \\u0006 \x07 \\u0007 \
+        \x0b \\u000b \x0e \\u000e \x0f \\u000f \x10 \\u0010 \
+        \x11 \\u0011 \x12 \\u0012 \x13 \\u0013 \x14 \\u0014 \
+        \x15 \\u0015 \x16 \\u0016 \x17 \\u0017 \x18 \\u0018 \
+        \x19 \\u0019 \x1a \\u001a \x1b \\u001b \x1c \\u001c \
+        \x1d \\u001d \x1e \\u001e \x1f \\u001f ]
 }
 
 # discord::rest::Send --
@@ -58,7 +68,6 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
     variable SendCount
     variable BurstLimitSend
     variable BurstLimitPeriod
-
     if {$verb ni [list GET POST PUT PATCH DELETE]} {
         ${log}::error "Send: HTTP method not recognized: '$verb'"
         return -code error "Unknown HTTP method: $verb"
@@ -69,6 +78,7 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
             dict set SendCount $token $route 0
         }
         set sendCount [dict get $SendCount $token $route]
+        puts "disrest sendCount: $sendCount"
         if {$sendCount == 0} {
             after [expr {$BurstLimitPeriod * 1000}] [list \
                     dict set ::discord::rest::SendCount $token $route 0]
@@ -100,6 +110,7 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
 
     set moreOptions [list]
     set moreHeaders [list]
+    
     foreach {option value} $args {
         if {![regexp {^-(\w+)$} $option -> opt]} {
             return -code error "Invalid option: $option"
@@ -119,7 +130,7 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
     interp alias {} $callbackName {} ::discord::rest::SendCallback $sendId
 
     variable HttpApiVersion
-    set url "$::discord::ApiBaseUrl/v${HttpApiVersion}$resource"
+    set url "$::discord::ApiBaseUrl/v$HttpApiVersion$resource"
     dict set SendInfo $sendId [dict create cmd $cmd url $url token $token]
     if {[info exists route]} {
         dict set SendInfo $sendId route $route
@@ -133,6 +144,7 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
     }
     lappend command -command $callbackName
     ${log}::debug "Send: $command"
+    puts "{*}$command"
     {*}$command
     return
 }
@@ -257,6 +269,7 @@ proc discord::rest::CallbackCoroutine { coroutine data state } {
 #               bare: Nothing is done.
 #       indent  (optional) boolean for setting the output indentation setting.
 #               Default to false.
+#       level   Used in embeds to track embed length
 #
 # Results:
 #       Returns the modified dictionary value.
@@ -271,9 +284,10 @@ proc discord::rest::CallbackCoroutine { coroutine data state } {
 #                   }
 #             }
 
-proc discord::rest::DictToJson { data spec {indent false} } {
+proc discord::rest::DictToJson { data spec {indent false} {level {}}} {
     ::json::write::indented $indent
     set jsonData [dict create]
+    set embedlen 0
     dict for {field typeInfo} $spec {
         if {![dict exists $data $field]} {
             continue
@@ -282,21 +296,88 @@ proc discord::rest::DictToJson { data spec {indent false} } {
         set value [dict get $data $field]
         switch $type {
             object {
-                set value [DictToJson $value $meta $indent]
+                if {$field eq "embed"} {
+                    set level "#[info level]"
+                }
+                set value [DictToJson $value $meta $indent $level]
             }
             array {
-                set value [ListToJsonArray $value {*}$meta]
+                if {$field eq "fields" && [llength $value] > 25} {
+                    return -code error \
+                        "Number of fields in embed cannot exceed 25."
+                }
+                set value [ListToJsonArray $value {*}$meta $level]
             }
             string {
+                # embed limits
+                switch $field {
+                    "name" -
+                    "title" {
+                        if {[string length $value] > 256} {
+                          set value [string range $value 0 253]
+                            regexp {.+(?=\s)} $value value
+                            set value "$value..."
+                        }
+                    }
+                    "value" {
+                        if {[string length $value] > 1024} {
+                            set value [string range $value 0 1021]
+                            regexp {.+(?=\s)} $value value
+                            set value "$value..."
+                        }
+                    }
+                    "footer" -
+                    "description" {
+                        if {[string length $value] > 2048} {
+                          set value [string range $value 0 2045]
+                            regexp {.+(?=\s)} $value value
+                            set value "$value..."
+                        }
+                    }
+                }
+                if {$level != ""} {
+                    uplevel $level [list incr embedlen [string length $value]]
+                }
                 set value [::json::write::string $value]
             }
             bare {
+                if {$field eq "color"} {
+                  array set colours {
+                    white   ffffff
+                    silver  c0c0c0
+                    gray    808080
+                    black   000000
+                    red     ff0000
+                    maroon  800000
+                    yellow  ffff00
+                    olive   808000
+                    lime    00ff00
+                    green   008000
+                    aqua    00ffff
+                    teal    008080
+                    blue    0000ff
+                    navy    000080
+                    fuchsia ff00ff
+                    purple  800080
+                  }
+                  if {$level != ""} {
+                      uplevel $level [list incr embedlen [string length $value]]
+                  }
+                  if {[regexp -nocase {^[0-9a-f]{1,6}$} $value]} {
+                      set value [format %d "0x$value"]
+                  } elseif {[string tolower $value] in [array names colours]} {
+                      set value [format %d "0x$colours([string tolower $value])"]
+                  }
+                }
             }
             default {
                 return -code error "Unknown type: $type"
             }
         }
         dict set jsonData $field $value
+    }
+    if {$embedlen > 6000} {
+      return -code error "Total length of embed cannot exceed 6000 characters."
     }
     return [::json::write::object {*}$jsonData]
 }
@@ -311,30 +392,37 @@ proc discord::rest::DictToJson { data spec {indent false} } {
 #       meta    (optional) type and meta of subarrays if type is array, or JSON
 #               specification if type is object. Refer to
 #               discord::rest::DictToJson's spec argument for details.
+#       level   Used in embeds to track embed length
 #
 # Results:
 #       Returns a JSON array.
 
-proc discord::rest::ListToJsonArray { list type {meta {}} } {
+proc discord::rest::ListToJsonArray { list type {meta {}} {level {}}} {
     set jsonArray [list]
     switch $type {
         object {
             foreach element $list {
-                lappend jsonArray [DictToJson $element $meta]
+                lappend jsonArray [DictToJson $element $meta false $level]
             }
         }
         array {
             lassign $meta subtype submeta
             foreach element $list {
-                lappend jsonArray [ListToJsonArray $element $subtype $submeta]
+                lappend jsonArray [ListToJsonArray $element $subtype $submeta $level]
             }
         }
         string {
             foreach element $list {
+                if {$level != ""} {
+                    uplevel $level [list incr embedlen [string length $element]]
+                }
                 lappend jsonArray [::json::write::string $element]
             }
         }
         bare {
+            if {$level != ""} {
+                uplevel $level [list incr embedlen [string length $list]]
+            }
             set jsonArray $list
         }
         default {

@@ -133,7 +133,7 @@ proc discord::rest::GetUserDMs { token {cmd {}} } {
 
 proc discord::rest::CreateDM { token data {cmd {}} } {
     set spec {
-            recipient   string
+            recipient_id   string
         }
     set body [DictToJson $data $spec]
     Send $token POST "/users/@me/channels" $body $cmd -type "application/json"

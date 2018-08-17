@@ -48,12 +48,12 @@ proc discord::rest::GetChannel { token channelId {cmd {}} } {
 
 proc discord::rest::ModifyChannel { token channelId data {cmd {}} } {
     set spec {
-            name        string
-            position    bare
-            topic       string
-            bitrate     bare
-            user_limit  bare
-        }
+        name        string
+        position    bare
+        topic       string
+        bitrate     bare
+        user_limit  bare
+    }
     set body [DictToJson $data $spec]
     Send $token PATCH "/channels/$channelId" $body $cmd
 }
@@ -121,7 +121,9 @@ proc discord::rest::GetChannelMessage { token channelId messageId {cmd {}} } {
 #       token       Bot token or OAuth2 bearer token.
 #       channelId   Channel ID.
 #       data        Dictionary representing a JSON object. Each key is one of
-#                   content, nonce, tts. Only the key content is required.
+#                   content, nonce, tts. Only the key content is required. If
+#                   a plain string is supplied, it will be read as being the
+#                   content of the message instead.
 #       cmd         (optional) callback procedure invoked after a response is
 #                   received.
 #
@@ -129,14 +131,45 @@ proc discord::rest::GetChannelMessage { token channelId messageId {cmd {}} } {
 #       Passes a message dictionary to the callback.
 
 proc discord::rest::CreateMessage { token channelId data {cmd {}} } {
+    if {[catch {dict create {*}$data} body err]} {
+        set body "{}"
+    }
     set spec {
-            content string
-            nonce   string
-            tts     bare
-        }
-    set body [DictToJson $data $spec]
-    set query [::http::formatQuery {*}$data]
-    Send $token POST "/channels/$channelId/messages" $query $cmd
+        content string
+        nonce   string
+        tts     bare
+        embed   {object {
+            title       string
+            type        string
+            description string
+            url         string
+            timestamp   bare
+            color       bare
+            footer      {object {
+                text string icon_url string proxy_icon_url string
+            }}
+            image       {object {
+                url string proxy_url string height bare width bare
+            }}
+            thumbnail   {object {
+                url string proxy_url string height bare width bare
+            }}
+            video       {object {url string height bare width bare}}
+            provider    {object {name string url string}}
+            author      {object {
+                name string url string icon_url string proxy_icon_url string
+            }}
+            fields      {array  {object {name string value string inline bare}}}
+        }}
+    }
+    set body [DictToJson $body $spec]
+    if {$body eq "{}"} {
+        Send $token POST "/channels/$channelId/messages" \
+            "content=[::http::formatQuery $data]" $cmd
+    } else {
+        Send $token POST "/channels/$channelId/messages" $body $cmd \
+            -type "application/json"
+    }
 }
 
 # discord::rest::UploadFile --
@@ -174,8 +207,8 @@ proc discord::rest::UploadFile { token channelId filename type data {cmd {}} } {
     if {[dict exists $data file]} {
         set value [dict get $data file]
         append body "$delimiter\r\n${dispoPrefix}name=\"file\"; "\
-                "filename=\"$filename\";\r\n" \
-                "Content-Type: $type\r\n\r\n$value"
+            "filename=\"$filename\";\r\n" \
+            "Content-Type: $type\r\n\r\n$value"
     }
     append body $closeDelimiter
     Send $token POST "/channels/$channelId/messages" $body $cmd \
@@ -199,12 +232,40 @@ proc discord::rest::UploadFile { token channelId filename type data {cmd {}} } {
 #       Passes a message dictionary to the callback.
 
 proc discord::rest::EditMessage { token channelId messageId data {cmd {}} } {
+    if {[catch {dict create {*}$data} body err]} {
+        set body "{}"
+    }
     set spec {
-            content string
-        }
-    set body [DictToJson $data $spec]
+        content string
+        nonce   string
+        tts     bare
+        embed   {object {
+            title       string
+            type        string
+            description string
+            url         string
+            timestamp   bare
+            color       bare
+            footer      {object {
+                text string icon_url string proxy_icon_url string
+            }}
+            image       {object {
+                url string proxy_url string height bare width bare
+            }}
+            thumbnail   {object {
+                url string proxy_url string height bare width bare
+            }}
+            video       {object {url string height bare width bare}}
+            provider    {object {name string url string}}
+            author      {object {
+                name string url string icon_url string proxy_icon_url string
+            }}
+            fields      {array  {object {name string value string inline bare}}}
+        }}
+    }
+    set body [DictToJson $body $spec]
     Send $token PATCH "/channels/$channelId/messages/$messageId" $body $cmd \
-            -type "application/json"
+        -type "application/json"
 }
 
 # discord::rest::DeleteMessage --
@@ -242,11 +303,11 @@ proc discord::rest::DeleteMessage { token channelId messageId {cmd {}} } {
 
 proc discord::rest::BulkDeleteMessages { token channelId data {cmd {}} } {
     set spec {
-            messages    {array string}
-        }
+        messages    {array string}
+    }
     set body [DictToJson $data $spec]
     Send $token POST "/channels/$channelId/messages/bulk-delete" $body $cmd \
-            -type "application/json"
+        -type "application/json"
 }
 
 # discord::rest::EditChannelPermissions --
@@ -266,11 +327,12 @@ proc discord::rest::BulkDeleteMessages { token channelId data {cmd {}} } {
 #       Passes an invite dictionary to the callback.
 
 proc discord::rest::EditChannelPermissions { token channelId overwriteId data \
-        {cmd {}} } {
+    {cmd {}}
+} {
     set spec {
-            allow   bare
-            deny    bare
-            type    string
+        allow   bare
+        deny    bare
+        type    string
     }
     set body [DictToJson $data $spec]
     Send $token PUT "/channels/$channelId/permissions/$overwriteId" $body $cmd \
@@ -292,7 +354,8 @@ proc discord::rest::EditChannelPermissions { token channelId overwriteId data \
 #       None.
 
 proc discord::rest::DeleteChannelPermission { token channelId overwriteId \
-        {cmd {}} } {
+    {cmd {}} 
+} {
     Send $token DELETE "/channels/$channelId/permissions/$overwriteId" {} $cmd
 }
 
@@ -331,14 +394,14 @@ proc discord::rest::GetChannelInvites { token channelId {cmd {}} } {
 
 proc discord::rest::CreateChannelInvite { token channelId data {cmd {}} } {
     set spec {
-            max_age     bare
-            max_uses    bare
-            temporary   bare
-            unique      bare
-        }
+        max_age     bare
+        max_uses    bare
+        temporary   bare
+        unique      bare
+    }
     set body [DictToJson $data $spec]
     Send $token POST "/channels/$channelId/invites" $body $cmd \
-            -type "application/json"
+        -type "application/json"
 }
 
 # discord::rest::TriggerTypingIndicator --
@@ -356,7 +419,7 @@ proc discord::rest::CreateChannelInvite { token channelId data {cmd {}} } {
 
 proc discord::rest::TriggerTypingIndicator { token channelId {cmd {}} } {
     Send $token POST "/channels/$channelId/typing" {} $cmd \
-            -headers [list Content-Length 0]
+        -headers [list Content-Length 0]
 }
 
 # discord::rest::GetPinnedMessages --
@@ -391,9 +454,10 @@ proc discord::rest::GetPinnedMessages { token channelId {cmd {}} } {
 #       None.
 
 proc discord::rest::AddPinnedChannelMessage { token channelId messageId \
-        {cmd {}} } {
+    {cmd {}}
+} {
     Send $token PUT "/channels/$channelId/pins/$messageId" {} $cmd \
-            -headers [list Content-Length 0]
+        -headers [list Content-Length 0]
 }
 
 # discord::rest::DeletePinnedChannelMessage --
@@ -411,7 +475,8 @@ proc discord::rest::AddPinnedChannelMessage { token channelId messageId \
 #       None.
 
 proc discord::rest::DeletePinnedChannelMessage { token channelId messageId \
-        {cmd {}} } {
+    {cmd {}}
+} {
     Send $token DELETE "/channels/$channelId/pins/$messageId" {} $cmd
 }
 
@@ -432,10 +497,10 @@ proc discord::rest::DeletePinnedChannelMessage { token channelId messageId \
 #       None. (Probably a user dictionary)
 
 proc discord::rest::GroupDMAddRecipient { token channelId userId data {cmd {}} \
-        } {
+} {
     set spec {
-            access_token    string
-        }
+        access_token    string
+    }
     set body [DictToJson $data $spec]
     Send $token PUT "/channels/$channelId/recipients/$userId" $body $cmd
 }

@@ -25,7 +25,7 @@ namespace eval discord {
     ::http::config -useragent $UserAgent
 
     variable ApiBaseUrl "https://discordapp.com/api"
-
+    
     variable log [::logger::init discord]
     ${log}::setlevel debug
 
@@ -33,6 +33,7 @@ namespace eval discord {
 
     variable DefCallbacks {
         READY                       {}
+        RESUMED                     {}
         CHANNEL_CREATE              {}
         CHANNEL_UPDATE              {}
         CHANNEL_DELETE              {}
@@ -57,6 +58,16 @@ namespace eval discord {
         PRESENCE_UPDATE             {}
         TYPING_START                {}
         USER_UPDATE                 {}
+        USER_SETTINGS_UPDATE        {}
+        MESSAGE_REACTION_ADD        {}
+        MESSAGE_REACTION_REMOVE     {}
+        CHANNEL_PINS_UPDATE         {}
+        PRESENCES_REPLACE           {}
+        VOICE_STATE_UPDATE          {}
+        VOICE_SERVER_UPDATE         {}
+        MESSAGE_ACK                 {}
+        CHANNEL_PINS_ACK            {}
+        CHANNEL_PINS_UPDATE         {}
     }
     set EventToProc {
         READY                       Ready
@@ -148,6 +159,7 @@ proc discord::disconnect { sessionNs } {
         ${log}::error "disconnect: $res"
     }
     DeleteSession $sessionNs
+    MonitorNetwork
     return 1
 }
 

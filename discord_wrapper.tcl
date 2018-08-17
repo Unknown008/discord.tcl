@@ -15,13 +15,16 @@ namespace eval discord {
             getChannelInvites createChannelInvite triggerTyping \
             getPinnedMessages pinMessage unpinMessage getGuild modifyGuild \
             getChannels createChannel changeChannelPositions getMember \
-            getMembers addMember modifyMember kickMember getBans ban unban \
-            getRoles createRole batchModifyRoles modifyRole deleteRole \
-            getPruneCount prune getGuildVoiceRegions getGuildInvites \
-            getIntegrations createIntegration modifyIntegration \
-            deleteIntegration syncIntegration getGuildEmbed modifyGuildEmbed \
-            getCurrentUser getUser modifyCurrentUser getGuilds leaveGuild \
-            getDMs createDM getConnections getVoiceRegions sendDM closeDM
+            getMembers addMember modifyMember modifyBotnick addGuildMemberRole \
+            removeGuildMemberRole kickMember getBans ban unban getRoles \
+            createRole batchModifyRoles modifyRole deleteRole getPruneCount \
+            prune getGuildVoiceRegions getGuildInvites getIntegrations \
+            createIntegration modifyIntegration deleteIntegration \
+            syncIntegration getGuildEmbed getGuildVanityUrl modifyGuildEmbed \
+            getAuditLog getCurrentUser getUser modifyCurrentUser getGuilds \
+            leaveGuild getDMs createDM getConnections getVoiceRegions sendDM \
+            closeDM
+            
     namespace ensemble create
 }
 
@@ -163,7 +166,7 @@ discord::GenApiProc getMessage { channelId messageId } {
 
 discord::GenApiProc sendMessage { channelId content } {
     rest::CreateMessage [set ${sessionNs}::token] $channelId \
-            [dict create content $content] $cmd
+            $content $cmd
 }
 
 # discord::uploadFile --
@@ -196,7 +199,7 @@ discord::GenApiProc uploadFile { channelId filename type file } {
 
 discord::GenApiProc editMessage { channelId messageId content } {
     rest::EditMessage [set ${sessionNs}::token] $channelId $messageId \
-            [dict create content $content] $cmd
+            $content $cmd
 }
 
 # discord::deleteMessage --
@@ -493,6 +496,53 @@ discord::GenApiProc modifyMember { guildId userId data } {
             $cmd
 }
 
+# discord::modifyBotnick --
+#
+#       Modify current user's nickname.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       data        Dictionary representing a JSON object. The key must be
+#                   nick
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc modifyBotnick { guildId data } {
+    rest::ModifyCurrentUserNick [set ${sessionNs}::token] $guildId $data $cmd
+}
+
+# discord::addGuildMemberRole --
+#
+#       Add a role to a guild member.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       userId      User ID.
+#       roleId      Role ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc addGuildMemberRole { guildId userId roleId } {
+    rest::AddGuildMemberRole [set ${sessionNs}::token] $guildId $userId \
+            $roleId $cmd
+}
+
+# discord::removeGuildMemberRole --
+#
+#       Remove a role to a guild member.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       userId      User ID.
+#       roleId      Role ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc removeGuildMemberRole { guildId userId data } {
+    rest::RemoveGuildMemberRole [set ${sessionNs}::token] $guildId $userId \
+            $roleId $cmd
+}
+
 # discord::kickMember --
 #
 #       Remove a member from the guild.
@@ -769,6 +819,19 @@ discord::GenApiProc getGuildEmbed { guildId } {
     rest::GetGuildEmbed [set ${sessionNs}::token] $guildId $cmd
 }
 
+# discord::getGuildVanityUrl --
+#
+#      Get the guild vanity URL.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getGuildVanityUrl { guildId } {
+    rest::GetGuildVanityUrl [set ${sessionNs}::token] $guildId $cmd
+}
+
 # discord::modifyGuildEmbed --
 #
 #      Modify the guild embed.
@@ -782,6 +845,20 @@ discord::GenApiProc getGuildEmbed { guildId } {
 
 discord::GenApiProc modifyGuildEmbed { guildId data } {
     rest::ModifyGuildEmbed [set ${sessionNs}::token] $guildId $data $cmd
+}
+
+# discord::getAuditLog --
+#
+#       Get the audit log entry.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       guildId     Guild ID.
+#       data        Additional queries
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getAuditLog { guildId {data {}} } {
+    rest::GetGuildAuditLog [set ${sessionNs}::token] $guildId $data $cmd
 }
 
 # discord::getCurrentUser --
@@ -930,7 +1007,7 @@ proc discord::sendDM { sessionNs userId content {getResult 0} } {
         return [uplevel [list ::discord::sendMessage $sessionNs $channelId \
                 $content $getResult]]
     } else {
-        ${log}::error "sendDM: DM channel not found for user: $userId"
+        ${log}::log "sendDM: DM channel not found for user: $userId"
         return -code error "DM channel not found for user: $userId"
     }
 }
