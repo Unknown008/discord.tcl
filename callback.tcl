@@ -141,6 +141,10 @@ proc discord::callback::event::Guild { sessionNs event data } {
                 set userId [dict get $user id]
                 dict for {field value} $user {
                     dict set ${sessionNs}::users $userId $field $value
+                    if {[dict exists $member nick]} {
+                        dict set ${sessionNs}::users $userId nick $id \
+                            [dict get $member nick]
+                    }
                 }
             }
             foreach presence [dict get $data presences] {
@@ -153,6 +157,7 @@ proc discord::callback::event::Guild { sessionNs event data } {
             }
         }
         GUILD_DELETE {
+            puts "callback::event::guild:\n$data"
             dict unset ${sessionNs}::guilds $id
         }
     }
