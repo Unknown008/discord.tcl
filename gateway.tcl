@@ -423,7 +423,11 @@ proc discord::gateway::Every {interval script} {
 
 proc discord::gateway::GetGatewayInfo { sock what } {
     variable Gateways
-    return [set [dict get $Gateways $sock]::$what]
+    if {![dict exists $Gateways $sock]} {
+      
+    } else {
+      return [set [dict get $Gateways $sock]::$what]
+    }
 }
 
 # discord::gateway::SetGatewayInfo --
@@ -584,6 +588,7 @@ proc discord::gateway::TextHandler { sock msg } {
     if {$LogWsMsg} {
         ${log}::${MsgLogLevel} "TextHandler: msg: $msg"
     }
+    regsub -all {:null} $msg {:""} msg
     if {[catch {::json::json2dict $msg} res]} {
         ${log}::error "TextHandler: $res"
         return 0
@@ -642,6 +647,8 @@ proc discord::gateway::Handler { sock type msg } {
         close {
             ::discord::gateway::Every cancel \
                     [list ::discord::gateway::Send $sock Heartbeat]
+            after cancel [list ::discord::gateway::SetGatewayInfo $sock \
+                  sendCount 0]
             ${log}::notice "Handler: Connection closed."
             ${log}::notice "Info level: [info level]"
             set mode [lindex $msg 0]
@@ -649,7 +656,7 @@ proc discord::gateway::Handler { sock type msg } {
         disconnect {
             variable Gateways
             ${log}::notice "Handler: Disconnected."
-            if {$mode in [list 1001]} {
+            if {$mode in [list 1000 1001]} {
                 set interval [GetGatewayInfo $sock heartbeat_interval]
                 set gatewayNs [dict get $Gateways $sock]
                 set sessionNs ::discord::session::[expr {
@@ -661,7 +668,7 @@ proc discord::gateway::Handler { sock type msg } {
                 exit
             }
         }
-        ping {      ;# Not sure if Discord uses this.
+        error {      ;# Not sure if Discord uses this.
             ${log}::notice "Handler: ping: $msg"
         }
         default {
@@ -829,6 +836,8 @@ proc discord::gateway::MakeIdentify { sock args } {
 
 proc discord::gateway::reconnect { pGatewayNs sessionNs prevSock } {
     variable log
+    variable Gateways
+    puts "gateway reconnect: prevSock $prevSock\nDict: $Gateways\n[lmap x [after info] {after info $x}]"
     if {[catch {GetGateway $::discord::ApiBaseUrl} gateway options]} {
         ${log}::error "connect: $gateway"
         return -options $options $gateway
@@ -848,7 +857,6 @@ proc discord::gateway::reconnect { pGatewayNs sessionNs prevSock } {
           $sessionNs $prevSock]
         return 1
     }
-    variable Gateways
     variable DefHeartbeatInterval
     variable DefCompress
     variable EventCallbacks
@@ -857,7 +865,7 @@ proc discord::gateway::reconnect { pGatewayNs sessionNs prevSock } {
     
     set ${gatewayNs}::sock               $sock
     set ${gatewayNs}::defEventCallback   [set ${pGatewayNs}::defEventCallback]
-    set ${gatewayNs}::sendCount          [set ${pGatewayNs}::sendCount]
+    set ${gatewayNs}::sendCount          0
     set ${gatewayNs}::seq                [set ${pGatewayNs}::seq]
     set ${gatewayNs}::session_id         [set ${pGatewayNs}::session_id]
     set ${gatewayNs}::connectCallback    [set ${pGatewayNs}::connectCallback]
@@ -871,6 +879,7 @@ proc discord::gateway::reconnect { pGatewayNs sessionNs prevSock } {
     dict unset Gateways $prevSock
                 
     set ${sessionNs}::gatewayNs $gatewayNs
+    puts "gateway reconnect: Sock $sock\nDict: $Gateways\n[lmap x [after info] {after info $x}]"
     return 1
 }
 
