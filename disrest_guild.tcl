@@ -257,6 +257,69 @@ proc discord::rest::ModifyGuildMember { token guildId userId data {cmd {}} } {
             -type "application/json"
 }
 
+# discord::rest::ModifyCurrentUserNick --
+#
+#       Modify the current user's nickname.
+#
+# Arguments:
+#       token   Bot token or OAuth2 bearer token.
+#       guildId Guild ID.
+#       data    Dictionary representing a JSON object. The key must be
+#               nick
+#       cmd     (optional) callback procedure invoked after a response is
+#               received.
+#
+# Results:
+#       None.
+
+proc discord::rest::ModifyCurrentUserNick {token guildId data {cmd {}}} {
+    set spec {
+            nick        string
+        }
+    set body [DictToJson $data $spec]
+    Send $token PATCH "/guilds/$guildId/members/@me/nick" $body $cmd \
+            -type "application/json"
+}
+
+# discord::rest::AddGuildMemberRole --
+#
+#       Modify the current user's nickname.
+#
+# Arguments:
+#       token   Bot token or OAuth2 bearer token.
+#       guildId Guild ID.
+#       userId  User ID of the member to whom the role needs to be added to.
+#       roleId  Role ID.
+#       cmd     (optional) callback procedure invoked after a response is
+#               received.
+#
+# Results:
+#       None.
+
+proc discord::rest::AddGuildMemberRole {token guildId userId roleId {cmd {}}} {
+    Send $token PUT "/guilds/$guildId/members/$userId/roles/$roleId" {} $cmd
+}
+
+# discord::rest::RemoveGuildMemberRole --
+#
+#       Modify the current user's nickname.
+#
+# Arguments:
+#       token   Bot token or OAuth2 bearer token.
+#       guildId Guild ID.
+#       userId  User ID of the member to whom the role needs to be added to.
+#       roleId  Role ID.
+#       cmd     (optional) callback procedure invoked after a response is
+#               received.
+#
+# Results:
+#       None.
+
+proc discord::rest::RemoveGuildMemberRole {token guildId userId roleId \
+  {cmd {}}} {
+    Send $token DELETE "/guilds/$guildId/members/$userId/roles/$roleId" {} $cmd
+}
+
 # discord::rest::RemoveGuildMember --
 #
 #       Remove a member from a guild.
@@ -668,4 +731,44 @@ proc discord::rest::ModifyGuildEmbed { token guildId data {cmd {}} } {
     set body [DictToJson $data [dict get $::discord::JsonSpecs guild_embed]]
     Send $token PATCH "/guilds/$guildId/embed" $body $cmd \
             -type "application/json"
+}
+
+# discord::rest::GetGuildVanityUrl --
+#
+#       Modify a guild embed for the guild.
+#
+# Arguments:
+#       token   Bot token or OAuth2 bearer token.
+#       guildId Guild ID.
+#       data    Dictionary representing a JSON object. Each key is one of
+#               enabled, channel_id. All keys are optional.
+#       cmd     (optional) callback procedure invoked after a response is
+#               received.
+#
+# Results:
+#       Passes the vanity url embed dictionary to the callback.
+
+proc discord::rest::GetGuildVanityUrl {token guildId {cmd {}}} {
+    Send $token GET "/guilds/$guildId/vanity-url" {} $cmd
+}
+
+# discord::rest::GetGuildAuditLog --
+#
+#       Returns a list of integrations for the guild.
+#
+# Arguments:
+#       token   Bot token or OAuth2 bearer token.
+#       guildId Guild ID.
+#       data    Dictionary representing a JSON object. Each key is one of
+#                   user_id, action_type, before or limit. All the keys are
+#                   optional.
+#       cmd     (optional) callback procedure invoked after a response is
+#               received.
+#
+# Results:
+#       Passes a list of integration dictionaries to the callback.
+
+proc discord::rest::GetGuildAuditLog { token guildId data {cmd {}} } {
+    set query [::http::formatQuery {*}$data]
+    Send $token GET "/guilds/$guildId/audit-logs?$query" {} $cmd
 }
