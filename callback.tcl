@@ -49,7 +49,7 @@ proc discord::callback::event::Ready { sessionNs event data } {
 proc discord::callback::event::Channel { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set id [dict get $data id]
-    set typeNames [dict create 0 Text 1 DM 2 Voice]
+    set typeNames [dict create {*}$::discord::ChannelTypes]
     set type [dict get $data type]
     if {![dict exists $typeNames $type]} {
         ${log}::warn "ChannelCreate: Unknown type '$type': $data"

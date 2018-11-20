@@ -78,7 +78,6 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
             dict set SendCount $token $route 0
         }
         set sendCount [dict get $SendCount $token $route]
-        puts "disrest sendCount: $sendCount"
         if {$sendCount == 0} {
             after [expr {$BurstLimitPeriod * 1000}] [list \
                     dict set ::discord::rest::SendCount $token $route 0]
@@ -144,7 +143,6 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
     }
     lappend command -command $callbackName
     ${log}::debug "Send: $command"
-    puts "{*}$command"
     {*}$command
     return
 }
@@ -174,6 +172,7 @@ proc discord::rest::SendCallback { sendId token } {
     set discordToken [dict get $SendInfo $sendId token]
     set state [array get $token]
     set status [::http::status $token]
+    
     switch $status {
         ok {
             array set meta [::http::meta $token]

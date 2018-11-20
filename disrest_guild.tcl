@@ -116,8 +116,13 @@ proc discord::rest::CreateGuildChannel { token guildId data {cmd {}} } {
     set spec {
             name                    string
             type                    string
+            topic                   string
             bitrate                 bare
             user_limit              bare
+            rate_limit_per_user	    bare
+            parent_id               bare
+            nsfw                    bare
+            
         }
     dict set spec permission_overwrites [list array [list object \
             [dict get $::discord::JsonSpecs overwrite]]]
