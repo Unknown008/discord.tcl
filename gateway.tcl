@@ -69,14 +69,12 @@ namespace eval discord::gateway {
         MESSAGE_DELETE_BULK         {}
         PRESENCE_UPDATE             {}
         TYPING_START                {}
-        USER_SETTINGS_UPDATE        {}
         USER_UPDATE                 {}
+        USER_SETTINGS_UPDATE        {}
         VOICE_STATE_UPDATE          {}
         VOICE_SERVER_UPDATE         {}
-        
         MESSAGE_REACTION_ADD        {}
         MESSAGE_REACTION_REMOVE     {}
-
         MESSAGE_ACK                 {}
         CHANNEL_PINS_ACK            {}
         CHANNEL_PINS_UPDATE         {}

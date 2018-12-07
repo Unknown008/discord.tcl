@@ -2,7 +2,7 @@
 #
 #       This file implements the Tcl code for interacting with the Discord API.
 #
-# Copyright (c) 2016, Yixin Zhang
+# Copyright (c) 2018, Jerry Yong
 #
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
@@ -12,6 +12,7 @@ package require http
 package require tls
 package require json
 package require logger
+package require sqlite3
 
 ::http::register https 443 ::tls::socket
 
@@ -30,7 +31,6 @@ namespace eval discord {
     ${log}::setlevel debug
 
     variable SessionId 0
-
     variable DefCallbacks {
         READY                       {}
         RESUMED                     {}
@@ -137,10 +137,10 @@ proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
     set ${sessionNs}::gatewayNs $gatewayNs
     set ${sessionNs}::token $token
     set ${sessionNs}::self [dict create]
-    set ${sessionNs}::guilds [dict create]
+    #set ${sessionNs}::guilds [dict create]
     set ${sessionNs}::dmChannels [dict create]
-    set ${sessionNs}::users [dict create]
-    set ${sessionNs}::channels [dict create]
+    #set ${sessionNs}::users [dict create]
+    #set ${sessionNs}::channels [dict create]
     set ${sessionNs}::callbacks $DefCallbacks
     return $sessionNs
 }

@@ -8,8 +8,36 @@
 # file.
 
 package require Tcl 8.6
+package require sqlite3
 
-namespace eval discord::callback::event { }
+namespace eval discord::callback::event {
+    sqlite3 guild guilds.sqlite3
+    
+    guild eval {
+      CREATE TABLE IF NOT EXISTS guild(
+        guildId text PRIMARY KEY ON CONFLICT REPLACE,
+        data text
+      )
+    }
+    
+    guild eval {
+      CREATE TABLE IF NOT EXISTS chan(
+        channelId text PRIMARY KEY ON CONFLICT REPLACE,
+        guildId text
+      )
+    }
+    
+    guild eval {
+      CREATE TABLE IF NOT EXISTS users(
+        userId text PRIMARY KEY ON CONFLICT REPLACE,
+        data text
+      )
+    }
+    
+    guild eval {DELETE FROM guild}
+    guild eval {DELETE FROM chan}
+    guild eval {DELETE FROM users}
+}
 
 # Shared Arguments:
 #       sessionNs   Name of session namespace.
@@ -26,9 +54,9 @@ namespace eval discord::callback::event { }
 
 proc discord::callback::event::Ready { sessionNs event data } {
     set ${sessionNs}::self [dict get $data user]
-    foreach guild [dict get $data guilds] {
-        dict set ${sessionNs}::guilds [dict get $guild id] $guild
-    }
+    #foreach guild [dict get $data guilds] {
+        #dict set ${sessionNs}::guilds [dict get $guild id] $guild
+    #}
     foreach dmChannel [dict get $data private_channels] {
         dict set ${sessionNs}::dmChannels [dict get $dmChannel id] $dmChannel
     }
@@ -83,12 +111,19 @@ proc discord::callback::event::Channel { sessionNs event data } {
         }
     } else {
         set guildId [dict get $data guild_id]
-        set channels [dict get [set ${sessionNs}::guilds] $guildId channels]
+        #set channels [dict get [set ${sessionNs}::guilds] $guildId channels]
+        set guildData [guild eval {
+            SELECT data FROM guild WHERE guildId = :guildId
+        }]
+        set guildData {*}$guildData
+        set channels [dict get $guildData channels]
         switch $event {
             CHANNEL_CREATE {
                 lappend channels $data
-                dict set ${sessionNs}::guilds $guildId channels $channels
-                dict set ${sessionNs}::channels $id $guildId
+                #dict set ${sessionNs}::guilds $guildId channels $channels
+                dict set guildData channels $channels
+                #dict set ${sessionNs}::channels $id $guildId
+                guild eval {INSERT INTO chan VALUES (:id, :guildId)}
             }
             CHANNEL_UPDATE {
                 set newChannels [list]
@@ -100,7 +135,8 @@ proc discord::callback::event::Channel { sessionNs event data } {
                     }
                     lappend newChannels $channel
                 }
-                dict set ${sessionNs}::guilds $guildId channels $newChannels
+                #dict set ${sessionNs}::guilds $guildId channels $newChannels
+                dict set guildData channels $newChannels
             }
             CHANNEL_DELETE {
                 set newChannels [list]
@@ -110,9 +146,14 @@ proc discord::callback::event::Channel { sessionNs event data } {
                     }
                     lappend newChannels $channel
                 }
-                dict set ${sessionNs}::guilds $guildId channels $newChannels
-                dict unset ${sessionNs}::channels $id
+                #dict set ${sessionNs}::guilds $guildId channels $newChannels
+                dict set guildData channels $newChannels
+                #dict unset ${sessionNs}::channels $id
+                guild eval {DELETE FROM chan WHERE channelId = :id}
             }
+        }
+        guild eval {
+            UPDATE guild SET data = :guildData WHERE guildId = :guildId
         }
         set name [dict get $data name]
         ${log}::debug "$typeName $event: '$name' ($id)"
@@ -132,18 +173,52 @@ proc discord::callback::event::Guild { sessionNs event data } {
     set id [dict get $data id]
     switch $event {
         GUILD_CREATE {
-            dict set ${sessionNs}::guilds $id $data
+            #dict set ${sessionNs}::guilds $id $data
+            set existing [guild eval {SELECT 1 FROM guild WHERE guildId = :id}]
+            if {$existing != ""} {
+              guild eval {UPDATE guild SET data = :data}
+            } else {
+              guild eval {INSERT INTO guild VALUES (:id, :data)}
+            }
             foreach channel [dict get $data channels] {
-                dict set ${sessionNs}::channels [dict get $channel id] $id
+                
+                set channelId [dict get $channel id]
+                #dict set ${sessionNs}::channels [dict get $channel id] $id
+                set exists [guild eval {
+                    SELECT 1 FROM chan WHERE channelId = :channelId
+                }]
+                if {$exists != ""} {
+                    guild eval {DELETE FROM chan WHERE channelId = :channelId}
+                }
+                guild eval {INSERT INTO chan VALUES (:channelId, :id)}
             }
             foreach member [dict get $data members] {
                 set user [dict get $member user]
                 set userId [dict get $user id]
-                dict for {field value} $user {
-                    dict set ${sessionNs}::users $userId $field $value
+                set userData [guild eval {
+                    SELECT data FROM users WHERE userId = :userId
+                }]
+                set exists $userData
+                if {$userData == ""} {
+                    dict for {field value} $user {
+                        #dict set ${sessionNs}::users $userId $field $value
+                        dict set userData $field $value
+                    }
                     if {[dict exists $member nick]} {
-                        dict set ${sessionNs}::users $userId nick $id \
-                            [dict get $member nick]
+                        #dict set ${sessionNs}::users $userId nick $id \
+                        #    [dict get $member nick]
+                        dict set userData nick $id [dict get $member nick]
+                    }
+                    guild eval {INSERT INTO users VALUES (:userId, :userData)}
+                } else {
+                    set userData {*}$userData
+                    if {[dict exists $member nick]} {
+                        #dict set ${sessionNs}::users $userId nick $id \
+                        #    [dict get $member nick]
+                        dict set userData nick $id [dict get $member nick]
+                    }
+                    guild eval {
+                        UPDATE users SET data = :userData WHERE userId = :userId
                     }
                 }
             }
@@ -152,13 +227,19 @@ proc discord::callback::event::Guild { sessionNs event data } {
             }
         }
         GUILD_UPDATE {
+            set guildData [guild eval {
+                SELECT data FROM guild WHERE guildId = :id
+            }]
+            set guildData {*}$guildData
             dict for {field value} $data {
-                dict set ${sessionNs}::guilds $id $field $value
+                #dict set ${sessionNs}::guilds $id $field $value
+                dict set guildData $field $value
             }
+            guild eval {UPDATE guild SET data = :guildData WHERE guildId = :id}
         }
         GUILD_DELETE {
-            puts "callback::event::guild:\n$data"
-            dict unset ${sessionNs}::guilds $id
+            #dict unset ${sessionNs}::guilds $id
+            guild eval {DELETE FROM guild WHERE guildId = :id}
         }
     }
 
@@ -185,7 +266,12 @@ proc discord::callback::event::GuildBan { sessionNs event data } {
 
         GUILD_BAN_ADD -
         GUILD_BAN_REMOVE {
-            set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+            #set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+            set guildData [guild eval {
+                SELECT data FROM guild WHERE guildId = :guildId
+            }]
+            set guildData {*}$guildData
+            set guildName [dict get $guildData name]
             foreach field {id username discriminator} {
                 set $field [dict get $user $field]
             }
@@ -206,14 +292,19 @@ proc discord::callback::event::GuildBan { sessionNs event data } {
 proc discord::callback::event::GuildEmojisUpdate { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set guildId [dict get $data guild_id]
-    dict set ${sessionNs}::guilds $guildId emojis [dict get $data emojis]
-    set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    #dict set ${sessionNs}::guilds $guildId emojis [dict get $data emojis]
+    #set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    set guildData [guild eval {SELECT data FROM guild WHERE guildId = :guildId}]
+    set guildData {*}$guildData
+    set guildName [dict get $guildData name]
+    dict set guildData emojis [dict get $data emojis]
+    guild eval {UPDATE guild SET data = :guildData WHERE guildId = :guildId}
     ${log}::debug "$event: '$guildName' ($guildId)"
 }
 
 # discord::callback::event::GuildIntegrationsUpdate --
 #
-#       Callback procedure for Dispatch event Guild Emojis Update.
+#       Callback procedure for Guild Integrations Update.
 #
 # Results:
 #       Modify session guild information.
@@ -222,7 +313,10 @@ proc discord::callback::event::GuildIntegrationsUpdate { sessionNs event data
         } {
     set log [set ${sessionNs}::log]
     set guildId [dict get $data guild_id]
-    set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    #set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    set guildData [guild eval {SELECT data FROM guild WHERE guildId = :guildId}]
+    set guildData {*}$guildData
+    set guildName [dict get $guildData name]
     ${log}::debug "$event: '$guildName' ($guildId)"
 }
 
@@ -238,11 +332,15 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
     set user [dict get $data user]
     set id [dict get $user id]
     set guildId [dict get $data guild_id]
-    set members [dict get [set ${sessionNs}::guilds] $guildId members]
+    #set members [dict get [set ${sessionNs}::guilds] $guildId members]
+    set guildData [guild eval {SELECT data FROM guild WHERE guildId = :guildId}]
+    set guildData {*}$guildData
+    set members [dict get $guildData members]
     switch $event {
         GUILD_MEMBER_ADD {
             lappend members [dict remove $data guild_id]
-            dict set ${sessionNs}::guilds $guildId members $members
+            #dict set ${sessionNs}::guilds $guildId members $members
+            dict set guildData members $members
         }
         GUILD_MEMBER_REMOVE {
             set newMembers [list]
@@ -253,7 +351,8 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
                     lappend newMembers $member
                 }
             }
-            dict set ${sessionNs}::guilds $guildId members $newMembers
+            #dict set ${sessionNs}::guilds $guildId members $newMembers
+            dict set guildData members $newMembers
         }
         GUILD_MEMBER_UPDATE {
             set newMembers [list]
@@ -265,10 +364,13 @@ proc discord::callback::event::GuildMember { sessionNs event data } {
                 }
                 lappend newMembers $member
             }
-            dict set ${sessionNs}::guilds $guildId members $newMembers
+            #dict set ${sessionNs}::guilds $guildId members $newMembers
+            dict set guildData members $newMembers
         }
     }
-    set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    guild eval {UPDATE guild SET data = :guildData WHERE guildId = :guildId}
+    #set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    set guildName [dict get $guildData name]
     foreach field {username discriminator} {
         set $field [dict get $user $field]
     }
@@ -288,7 +390,10 @@ proc discord::callback::event::GuildMembersChunk { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set guildId [dict get $data guild_id]
     set members [dict get $data members]
-    set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    #set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    set guildData [guild eval {SELECT data FROM guild WHERE guildId = :guildId}]
+    set guildData {*}$guildData
+    set guildName [dict get $guildData name]
     ${log}::debug [join [list \
             "$event: Received [llength $members] offline members in" \
             "'$guildName' ($guildId)"]]
@@ -306,13 +411,17 @@ proc discord::callback::event::GuildMembersChunk { sessionNs event data } {
 proc discord::callback::event::GuildRole { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set guildId [dict get $data guild_id]
-    set roles [dict get [set ${sessionNs}::guilds] $guildId roles]
+    #set roles [dict get [set ${sessionNs}::guilds] $guildId roles]
+    set guildData [guild eval {SELECT data FROM guild WHERE guildId = :guildId}]
+    set guildData {*}$guildData
+    set roles [dict get $guildData roles]
     set role {}
     switch $event {
         GUILD_ROLE_CREATE {
             set role [dict get $data role]
             lappend roles $role
-            dict set ${sessionNs}::guilds $guildId roles $roles
+            #dict set ${sessionNs}::guilds $guildId roles $roles
+            dict set guildData roles $roles
         }
         GUILD_ROLE_UPDATE {
             set role [dict get $data role]
@@ -326,7 +435,8 @@ proc discord::callback::event::GuildRole { sessionNs event data } {
                 }
                 lappend newRoles $r
             }
-            dict set ${sessionNs}::guilds $guildId roles $newRoles
+            #dict set ${sessionNs}::guilds $guildId roles $newRoles
+            dict set guildData roles $newRoles
         }
         GUILD_ROLE_DELETE {
             set id [dict get $data role_id]
@@ -338,13 +448,16 @@ proc discord::callback::event::GuildRole { sessionNs event data } {
                 }
                 lappend newRoles $r
             }
-            dict set ${sessionNs}::guilds $guildId roles $newRoles
+            #dict set ${sessionNs}::guilds $guildId roles $newRoles
+            dict set guildData roles $newRoles
         }
     }
+    guild eval {UPDATE guild SET data = :guildData WHERE guildId = :guildId}
     foreach field {id name} {
         set $field [dict get $role $field]
     }
-    set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    #set guildName [dict get [set ${sessionNs}::guilds] $guildId name]
+    set guildName [dict get $guildData name]
     ${log}::debug "$event '$guildName' ($guildId): '$name' ($id)"
     return
 }
@@ -403,20 +516,30 @@ proc discord::callback::event::PresenceUpdate { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set user [dict get $data user]
     set userId [dict get $user id]
+    set userData [lindex [guild eval {
+        SELECT data FROM users WHERE userId = :userId
+    }] 0]
     dict for {field value} $user {
-        dict set ${sessionNs}::users $userId $field $value
+        #dict set ${sessionNs}::users $userId $field $value
+        dict set userData $field $value
     }
-    set userFields [list game status]
-    foreach field $userFields {
+    foreach field {game status} {
         catch {
-            set value [dict get $data field]
-            dict set ${sessionNs}::users $userId $field $value
+            set value [dict get $data $field]
+            #dict set ${sessionNs}::users $userId $field $value
+            dict set userData $field $value
         }
     }
+    guild eval {UPDATE users SET data = :userData WHERE userId = :userId}
     if {[dict exists $data guild_id]} {
         set guildId [dict get $data guild_id]
         set newMembers [list]
-        set members [dict get [set ${sessionNs}::guilds] $guildId members]
+        #set members [dict get [set ${sessionNs}::guilds] $guildId members]
+        set guildData [guild eval {
+            SELECT data FROM guild WHERE guildId = :guildId
+        }]
+        set guildData {*}$guildData
+        set members [dict get $guildData members]
         foreach member $members {
             set memberUser [dict get $member user]
             set memberUserId [dict get $memberUser id]
@@ -430,7 +553,9 @@ proc discord::callback::event::PresenceUpdate { sessionNs event data } {
             }
             lappend newMembers $member
         }
-        dict set ${sessionNs}::guilds $guildId members $newMembers
+        #dict set ${sessionNs}::guilds $guildId members $newMembers
+        dict set guildData members $newMembers
+        guild eval {UPDATE guild SET data = :guildData WHERE guildId = :guildId}
     }
     ${log}::debug "$event: $userId"
 }
@@ -445,11 +570,16 @@ proc discord::callback::event::PresenceUpdate { sessionNs event data } {
 proc discord::callback::event::UserUpdate { sessionNs event data } {
     set log [set ${sessionNs}::log]
     set id [dict get $data id]
+    set userData [guild eval {SELECT data FROM users WHERE userId = :id}]
+    set userData {*}$userData
     dict for {field value} $data {
-        dict set ${sessionNs}::users $id $field $value
+        #dict set ${sessionNs}::users $id $field $value
+        dict set userData $field $value
     }
-    foreach field [list username discriminator] {
-        set $field [dict get [set ${sessionNs}::users] $id $field]
+    guild eval {UPDATE users SET data = :userData WHERE userId = :id}
+    foreach field {username discriminator} {
+        #set $field [dict get [set ${sessionNs}::users] $id $field]
+        set field [dict get $userData $field]
     }
     ${log}::debug "$event: ${username}#${discriminator} ($id)"
 }
