@@ -404,8 +404,12 @@ proc discord::gateway::Every {interval script} {
     }
     set afterId [after $interval [info level 0]]
     set EveryIds($script) $afterId
-    uplevel #0 $script
-    return $afterId
+    
+    if {[catch {uplevel #0 $script}]} {
+        after cancel $EveryIds($script)
+    } else {
+        return $afterId
+    }
 }
 
 # discord::gateway::GetGatewayInfo --
@@ -758,7 +762,7 @@ proc discord::gateway::MakeIdentify { sock args } {
     set token               [::json::write::string \
                                     [GetGatewayInfo $sock token]]
     set os                  [::json::write::string linux]
-    set agent "discord.tcl $::discord::version"
+    set agent               "discord.tcl $::discord::version"
     set browser             [::json::write::string $agent]
     set device              [::json::write::string $agent]
     set referrer            [::json::write::string ""]
@@ -835,7 +839,6 @@ proc discord::gateway::MakeIdentify { sock args } {
 proc discord::gateway::reconnect { pGatewayNs sessionNs prevSock } {
     variable log
     variable Gateways
-    puts "gateway reconnect: prevSock $prevSock\nDict: $Gateways\n[lmap x [after info] {after info $x}]"
     if {[catch {GetGateway $::discord::ApiBaseUrl} gateway options]} {
         ${log}::error "connect: $gateway"
         return -options $options $gateway
@@ -877,7 +880,6 @@ proc discord::gateway::reconnect { pGatewayNs sessionNs prevSock } {
     dict unset Gateways $prevSock
                 
     set ${sessionNs}::gatewayNs $gatewayNs
-    puts "gateway reconnect: Sock $sock\nDict: $Gateways\n[lmap x [after info] {after info $x}]"
     return 1
 }
 
