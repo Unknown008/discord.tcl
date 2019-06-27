@@ -244,16 +244,16 @@ proc discord::callback::event::GuildBan {sessionNs event data} {
     switch $event {
         GUILD_BAN_ADD -
         GUILD_BAN_REMOVE {
-        set guildData [guild eval {
-            SELECT data FROM guild WHERE guildId = :guildId
-        }]
-        set guildData {*}$guildData
-        set guildName [dict get $guildData name]
-        foreach field {id username discriminator} {
-            set $field [dict get $user $field]
-        }
-        ${log}::debug [join [list "$event '$guildName' ($guildId):" \
-                "${username}#$discriminator ($id)"]]
+            set guildData [guild eval {
+                SELECT data FROM guild WHERE guildId = :guildId
+            }]
+            set guildData {*}$guildData
+            set guildName [dict get $guildData name]
+            foreach field {id username discriminator} {
+                set $field [dict get $user $field]
+            }
+            ${log}::debug [join [list "$event '$guildName' ($guildId):" \
+                    "${username}#$discriminator ($id)"]]
         }
     }
     return
