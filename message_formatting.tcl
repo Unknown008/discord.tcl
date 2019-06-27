@@ -24,7 +24,7 @@ namespace eval discord {
 #       Returns a list containing the format type and contents if the string 
 #       follows a valid structure, or an empty string otherwise.
 
-proc discord::getMessageFormat { message } {
+proc discord::getMessageFormat {message} {
     set messageInfo [list]
     switch -regexp -matchvar match $message {
         {^<@(\d+)>$} {

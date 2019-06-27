@@ -32,7 +32,7 @@ namespace eval discord {
 # Results:
 #       Returns a Unix timestamp in milliseconds.
 
-proc getSnowflakeUnixTime { snowflake {epoch 0} } {
+proc getSnowflakeUnixTime {snowflake {epoch 0}} {
     if {![string is wideinteger -strict $snowflake]} {
         return -code error "Snowflake must be an integer: $snowflake"
     }
@@ -44,6 +44,7 @@ proc getSnowflakeUnixTime { snowflake {epoch 0} } {
     set SequenceNumberBits 12
     set snowflake [expr {$snowflake & 0xffffffffffffffff}]
     set time [expr {
-        ($snowflake >> ($MachineIdBits + $SequenceNumberBits)) & 0x1ffffffffff}]
+        ($snowflake >> ($MachineIdBits + $SequenceNumberBits)) & 0x1ffffffffff
+    }]
     return [expr {$epoch + $time}]
 }

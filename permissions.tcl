@@ -126,7 +126,7 @@ namespace eval discord {
 #       Returns a list of permission tokens, or raises an error if the
 #       permissions integer is invalid.
 
-proc discord::getPermList { permissions } {
+proc discord::getPermList {permissions} {
     if {![string is integer -strict $permissions]} {
         return -code error "Not an integer: $permissions"
     }
@@ -153,7 +153,7 @@ proc discord::getPermList { permissions } {
 #       Returns the new permissions integer, or raises an error if the
 #       permissions integer is invalid.
 
-proc discord::setPermissions { permissions permList } {
+proc discord::setPermissions {permissions permList} {
     if {![string is integer -strict $permissions]} {
         return -code error "Not an integer: $permissions"
     }
@@ -183,7 +183,7 @@ proc discord::setPermissions { permissions permList } {
 #       of matches, or 0 otherwise. An error will be raised if the permissions
 #       integer is invalid.
 
-proc discord::hasPermissions { permissions permList {minMatch 0} } {
+proc discord::hasPermissions {permissions permList {minMatch 0}} {
     if {![string is integer -strict $permissions]} {
         return -code error "Not an integer: $permissions"
     }
@@ -205,8 +205,10 @@ proc discord::hasPermissions { permissions permList {minMatch 0} } {
             incr permMatch
         }
     }
-    return [expr {($minMatch == 0 && $permMatch >= [llength $permList])
-            || ($minMatch != 0 && $permMatch >= $minMatch)}]
+    return [expr {
+        (($minMatch == 0) && ($permMatch >= [llength $permList]))
+        || (($minMatch != 0) && ($permMatch >= $minMatch))
+    }]
 }
 
 # discord::getPermissionDescription --
@@ -220,7 +222,7 @@ proc discord::hasPermissions { permissions permList {minMatch 0} } {
 #       Returns the description string for the permission, or raises an error if
 #       the permission is invalid.
 
-proc discord::getPermissionDescription { permission } {  
+proc discord::getPermissionDescription {permission} {  
     variable PermissionDescriptions
     if {[dict exists $PermissionDescriptions $permission]} {
         return [dict get $PermissionDescriptions $permission]

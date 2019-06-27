@@ -25,11 +25,11 @@
 # Results:
 #       Passes a webhook dictionary to the callback.
 
-proc discord::rest::CreateWebhook { token channelId data {cmd {}} } {
+proc discord::rest::CreateWebhook {token channelId data {cmd {}}} {
     set spec {
-            name    string
-            avatar  string
-        }
+        name    string
+        avatar  string
+    }
     set body [DictToJson $data $spec]
     Send $token POST "/channels/$channelId/webhooks" $body $cmd
 }
@@ -47,7 +47,7 @@ proc discord::rest::CreateWebhook { token channelId data {cmd {}} } {
 # Results:
 #       Passes a list of channel webhook dictionaries to the callback.
 
-proc discord::rest::GetChannelWebhooks { token channelId {cmd {}} } {
+proc discord::rest::GetChannelWebhooks {token channelId {cmd {}}} {
     Send $token GET "/channels/$channelId/webhooks" {} $cmd
 }
 
@@ -64,7 +64,7 @@ proc discord::rest::GetChannelWebhooks { token channelId {cmd {}} } {
 # Results:
 #       Passes a list of guild webhook dictionaries to the callback.
 
-proc discord::rest::GetGuildWebhooks { token channelId {cmd {}} } {
+proc discord::rest::GetGuildWebhooks {token channelId {cmd {}}} {
     Send $token GET "/guilds/$guildId/webhooks" {} $cmd
 }
 
@@ -81,7 +81,7 @@ proc discord::rest::GetGuildWebhooks { token channelId {cmd {}} } {
 # Results:
 #       Passes a webhook dictionary to the callback.
 
-proc discord::rest::GetWebhook { token webhookId {cmd {}} } {
+proc discord::rest::GetWebhook {token webhookId {cmd {}}} {
     Send $token GET "/webhooks/$webhookId" {} $cmd
 }
 
@@ -99,7 +99,7 @@ proc discord::rest::GetWebhook { token webhookId {cmd {}} } {
 # Results:
 #       Passes a webhook dictionary to the callback.
 
-proc discord::rest::GetWebhookWithToken { webhookId webhookToken {cmd {}} } {
+proc discord::rest::GetWebhookWithToken {webhookId webhookToken {cmd {}}} {
     Send $token GET "/webhooks/$webhookId/$webhookToken" {} $cmd  
 }
 
@@ -118,11 +118,11 @@ proc discord::rest::GetWebhookWithToken { webhookId webhookToken {cmd {}} } {
 # Results:
 #       Passes a webhook dictionary to the callback.
 
-proc discord::rest::ModifyWebhook { token webhookId data {cmd {}} } {
+proc discord::rest::ModifyWebhook {token webhookId data {cmd {}}} {
     set spec {
-            name    string
-            avatar  string
-        }
+        name    string
+        avatar  string
+    }
     set body [DictToJson $data $spec]
     Send $token PATCH "/webhooks/$webhookId" $body $cmd
 }
@@ -143,12 +143,13 @@ proc discord::rest::ModifyWebhook { token webhookId data {cmd {}} } {
 # Results:
 #       Passes a webhook dictionary to the callback.
 
-proc discord::rest::ModifyWebhookWithToken { webhookId webhookToken data \
-        {cmd {}} } {
+proc discord::rest::ModifyWebhookWithToken {
+    webhookId webhookToken data {cmd {}}
+} {
     set spec {
-            name    string
-            avatar  string
-        }
+        name    string
+        avatar  string
+    }
     set body [DictToJson $data $spec]
     Send $token PATCH "/webhooks/$webhookId/$webhookToken" $body $cmd  
 }
@@ -166,7 +167,7 @@ proc discord::rest::ModifyWebhookWithToken { webhookId webhookToken data \
 # Results:
 #       None.
 
-proc discord::rest::DeleteWebhook { token webhookId {cmd {}} } {
+proc discord::rest::DeleteWebhook {token webhookId {cmd {}}} {
     Send $token DELETE "/webhooks/$webhookId" {} $cmd
 }
 
@@ -184,7 +185,7 @@ proc discord::rest::DeleteWebhook { token webhookId {cmd {}} } {
 # Results:
 #       None.
 
-proc discord::rest::DeleteWebhookWithToken { webhookId webhookToken {cmd {}} } {
+proc discord::rest::DeleteWebhookWithToken {webhookId webhookToken {cmd {}}} {
     Send $token DELETE "/webhooks/$webhookId/$webhookToken" {} $cmd  
 }
 
@@ -203,6 +204,6 @@ proc discord::rest::DeleteWebhookWithToken { webhookId webhookToken {cmd {}} } {
 # Results:
 #       None.
 
-proc discord::rest::ExecuteWebhook { webhookId webhookToken {cmd {}} } {
+proc discord::rest::ExecuteWebhook {webhookId webhookToken {cmd {}}} {
     Send $token POST "/webhooks/$webhookId/$webhookToken" {} $cmd
 }

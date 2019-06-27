@@ -24,7 +24,7 @@ package require json
 # Results:
 #       Passes a user dictionary to the callback.
 
-proc discord::rest::GetCurrentUser { token {cmd {}} } {
+proc discord::rest::GetCurrentUser {token {cmd {}}} {
     Send $token GET "/users/@me" {} $cmd
 }
 
@@ -41,7 +41,7 @@ proc discord::rest::GetCurrentUser { token {cmd {}} } {
 # Results:
 #       Passes a user dictionary to the callback.
 
-proc discord::rest::GetUser { token userId {cmd {}} } {
+proc discord::rest::GetUser {token userId {cmd {}}} {
     Send $token GET "/users/$userId" {} $cmd
 }
 
@@ -59,11 +59,11 @@ proc discord::rest::GetUser { token userId {cmd {}} } {
 # Results:
 #       Passes a user dictionary to the callback.
 
-proc discord::rest::ModifyCurrentUser { token data {cmd {}} } {
+proc discord::rest::ModifyCurrentUser {token data {cmd {}}} {
     set spec {
-            username    string
-            avatar      bare
-        }
+        username    string
+        avatar      bare
+    }
     set body [DictToJson $data $spec]
     Send $token PATCH "/users/@me" $body $cmd -type "application/json"
 }
@@ -80,7 +80,7 @@ proc discord::rest::ModifyCurrentUser { token data {cmd {}} } {
 # Results:
 #       Passes a list of guild dictionaries to the callback.
 
-proc discord::rest::GetCurrentUserGuilds { token {cmd {}} } {
+proc discord::rest::GetCurrentUserGuilds {token {cmd {}}} {
     Send $token GET "/users/@me/guilds" {} $cmd
 }
 
@@ -97,7 +97,7 @@ proc discord::rest::GetCurrentUserGuilds { token {cmd {}} } {
 # Results:
 #       None.
 
-proc discord::rest::LeaveGuild { token guildId {cmd {}} } {
+proc discord::rest::LeaveGuild {token guildId {cmd {}}} {
     Send $token DELETE "/users/@me/guilds/$guildId" {} $cmd
 }
 
@@ -113,7 +113,7 @@ proc discord::rest::LeaveGuild { token guildId {cmd {}} } {
 # Results:
 #       Passes a list of DM channel dictionaries to the callback.
 
-proc discord::rest::GetUserDMs { token {cmd {}} } {
+proc discord::rest::GetUserDMs {token {cmd {}}} {
     Send $token GET "/users/@me/channels" {} $cmd
 }
 
@@ -131,10 +131,10 @@ proc discord::rest::GetUserDMs { token {cmd {}} } {
 # Results:
 #       Passes a DM channel dictionary to the callback.
 
-proc discord::rest::CreateDM { token data {cmd {}} } {
+proc discord::rest::CreateDM {token data {cmd {}}} {
     set spec {
-            recipient_id   string
-        }
+        recipient_id   string
+    }
     set body [DictToJson $data $spec]
     Send $token POST "/users/@me/channels" $body $cmd -type "application/json"
 }
@@ -153,10 +153,10 @@ proc discord::rest::CreateDM { token data {cmd {}} } {
 # Results:
 #       Passes a DM channel dictionary to the callback.
 
-proc discord::rest::CreateGroupDM { token data {cmd {}} } {
+proc discord::rest::CreateGroupDM {token data {cmd {}}} {
     set spec {
-            access_tokens   {array string}
-        }
+        access_tokens   {array string}
+    }
     set body [DictToJson $data $spec]
     Send $token POST "/users/@me/channels" $body $cmd
 }
@@ -173,6 +173,6 @@ proc discord::rest::CreateGroupDM { token data {cmd {}} } {
 # Results:
 #       Passes a list of connection dictionaries to the callback.
 
-proc discord::rest::GetUsersConnections { token {cmd {}} } {
+proc discord::rest::GetUsersConnections {token {cmd {}}} {
     Send $token GET "/users/@me/connections" {} $cmd
 }

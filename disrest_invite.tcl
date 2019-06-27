@@ -23,7 +23,7 @@
 # Results:
 #       Passes an invite dictionary to the callback.
 
-proc discord::rest::GetInvite { token inviteCode {cmd {}} } {
+proc discord::rest::GetInvite {token inviteCode {cmd {}}} {
     Send $token GET "/invites/$inviteCode" {} $cmd
 }
 
@@ -40,7 +40,7 @@ proc discord::rest::GetInvite { token inviteCode {cmd {}} } {
 # Results:
 #       Passes an invite dictionary to the callback.
 
-proc discord::rest::DeleteInvite { token inviteCode {cmd {}} } {
+proc discord::rest::DeleteInvite {token inviteCode {cmd {}}} {
     Send $token DELETE "/invites/$inviteCode" {} $cmd
 }
 
@@ -57,6 +57,6 @@ proc discord::rest::DeleteInvite { token inviteCode {cmd {}} } {
 # Results:
 #       Passes an invite dictionary to the callback.
 
-proc discord::rest::DeleteInvite { token inviteCode {cmd {}} } {
+proc discord::rest::DeleteInvite {token inviteCode {cmd {}}} {
     Send $token POST "/invites/$inviteCode" {} $cmd
 }

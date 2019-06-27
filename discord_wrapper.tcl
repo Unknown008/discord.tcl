@@ -24,7 +24,7 @@ namespace eval discord {
             getAuditLog getCurrentUser getUser modifyCurrentUser getGuilds \
             leaveGuild getDMs createDM getConnections getVoiceRegions sendDM \
             closeDM
-            
+
     namespace ensemble create
 }
 
@@ -47,7 +47,7 @@ namespace eval discord {
 #       The variable "cmd" should be passed to discord::rest procedures that
 #       take a callback argument.
 
-proc discord::GenApiProc { _name _args _body } {
+proc discord::GenApiProc {_name _args _body} {
     set _args [list sessionNs {*}$_args {getResult 0}]
     set _setup {
         if {$getResult == 1} {
@@ -92,7 +92,7 @@ proc discord::GenApiProc { _name _args _body } {
 #       channelId   Channel ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getChannel { channelId } {
+discord::GenApiProc getChannel {channelId} {
     rest::GetChannel [set ${sessionNs}::token] $channelId $cmd
 }
 
@@ -108,7 +108,7 @@ discord::GenApiProc getChannel { channelId } {
 #                   optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc modifyChannel { channelId data } {
+discord::GenApiProc modifyChannel {channelId data} {
     rest::ModifyChannel [set ${sessionNs}::token] $channelId $data $cmd
 }
 
@@ -121,7 +121,7 @@ discord::GenApiProc modifyChannel { channelId data } {
 #       channelId   Channel ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc deleteChannel { channelId } {
+discord::GenApiProc deleteChannel {channelId} {
     rest::DeleteChannel [set ${sessionNs}::token] $channelId $cmd
 }
 
@@ -136,7 +136,7 @@ discord::GenApiProc deleteChannel { channelId } {
 #                   around, before, after, limit. All keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getMessages { channelId data } {
+discord::GenApiProc getMessages {channelId data} {
     rest::GetChannelMessages [set ${sessionNs}::token] $channelId $data $cmd
 }
 
@@ -150,7 +150,7 @@ discord::GenApiProc getMessages { channelId data } {
 #       messageId   Message ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getMessage { channelId messageId } {
+discord::GenApiProc getMessage {channelId messageId} {
     rest::GetChannelMessage [set ${sessionNs}::token] $channelId $messageId $cmd
 }
 
@@ -164,9 +164,8 @@ discord::GenApiProc getMessage { channelId messageId } {
 #       content     Message content.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc sendMessage { channelId content } {
-    rest::CreateMessage [set ${sessionNs}::token] $channelId \
-            $content $cmd
+discord::GenApiProc sendMessage {channelId content} {
+    rest::CreateMessage [set ${sessionNs}::token] $channelId $content $cmd
 }
 
 # discord::uploadFile --
@@ -181,7 +180,7 @@ discord::GenApiProc sendMessage { channelId content } {
 #       file        File data.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc uploadFile { channelId filename type file } {
+discord::GenApiProc uploadFile {channelId filename type file} {
     rest::UploadFile [set ${sessionNs}::token] $channelId $filename $type \
             $file $cmd
 }
@@ -197,7 +196,7 @@ discord::GenApiProc uploadFile { channelId filename type file } {
 #       content     New message content.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc editMessage { channelId messageId content } {
+discord::GenApiProc editMessage {channelId messageId content} {
     rest::EditMessage [set ${sessionNs}::token] $channelId $messageId \
             $content $cmd
 }
@@ -212,7 +211,7 @@ discord::GenApiProc editMessage { channelId messageId content } {
 #       messageId   Message ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc deleteMessage { channelId messageId } {
+discord::GenApiProc deleteMessage {channelId messageId} {
     rest::DeleteMessage [set ${sessionNs}::token] $channelId $messageId $cmd
 }
 
@@ -226,7 +225,7 @@ discord::GenApiProc deleteMessage { channelId messageId } {
 #       messageIds  List of Message IDs.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc bulkDeleteMessages { channelId messageIds } {
+discord::GenApiProc bulkDeleteMessages {channelId messageIds} {
     rest::BulkDeleteMessages [set ${sessionNs}::token] $channelId \
             [dict create messages $messageIds] $cmd
 }
@@ -243,7 +242,7 @@ discord::GenApiProc bulkDeleteMessages { channelId messageIds } {
 #                   allow, deny, type. All keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc editChannelPermissions { channelId overwriteId data } {
+discord::GenApiProc editChannelPermissions {channelId overwriteId data} {
     rest::EditChannelPermissions [set ${sessionNs}::token] $channelId \
             $overwriteId $data $cmd
 }
@@ -258,7 +257,7 @@ discord::GenApiProc editChannelPermissions { channelId overwriteId data } {
 #       overwriteId Overwrite ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc deleteChannelPermission { channelId overwriteId } {
+discord::GenApiProc deleteChannelPermission {channelId overwriteId} {
     rest::DeleteChannelPermission [set ${sessionNs}::token] $channelId \
             $overwriteId $cmd
 }
@@ -272,7 +271,7 @@ discord::GenApiProc deleteChannelPermission { channelId overwriteId } {
 #       channelId   Channel ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getChannelInvites { channelId } {
+discord::GenApiProc getChannelInvites {channelId} {
     rest::GetChannelInvites [set ${sessionNs}::token] $channelId $cmd
 }
 
@@ -287,7 +286,7 @@ discord::GenApiProc getChannelInvites { channelId } {
 #                   max_age, max_uses, temporary, unique. All keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc createChannelInvite { channelId data } {
+discord::GenApiProc createChannelInvite {channelId data} {
     rest::CreateChannelInvite [set ${sessionNs}::token] $channelId $data $cmd
 }
 
@@ -300,7 +299,7 @@ discord::GenApiProc createChannelInvite { channelId data } {
 #       channelId   Channel ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc triggerTyping { channelId } {
+discord::GenApiProc triggerTyping {channelId} {
     rest::TriggerTypingIndicator [set ${sessionNs}::token] $channelId $cmd
 }
 
@@ -313,7 +312,7 @@ discord::GenApiProc triggerTyping { channelId } {
 #       channelId   Channel ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getPinnedMessages { channelId } {
+discord::GenApiProc getPinnedMessages {channelId} {
     rest::GetPinnedMessages [set ${sessionNs}::token] $channelId $cmd
 }
 
@@ -327,7 +326,7 @@ discord::GenApiProc getPinnedMessages { channelId } {
 #       messageId   Message ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc pinMessage { channelId messageId } {
+discord::GenApiProc pinMessage {channelId messageId} {
     rest::AddPinnedChannelMessage [set ${sessionNs}::token] $channelId \
             $messageId $cmd
 }
@@ -342,7 +341,7 @@ discord::GenApiProc pinMessage { channelId messageId } {
 #       messageId   Message ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc unpinMessage { channelId messageId } {
+discord::GenApiProc unpinMessage {channelId messageId} {
     rest::DeletePinnedChannelMessage [set ${sessionNs}::token] $channelId \
             $messageId $cmd
 }
@@ -356,7 +355,7 @@ discord::GenApiProc unpinMessage { channelId messageId } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getGuild { guildId } {
+discord::GenApiProc getGuild {guildId} {
     rest::GetGuild [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -373,7 +372,7 @@ discord::GenApiProc getGuild { guildId } {
 #                   icon, owner_id, splash. All keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc modifyGuild { guildId data } {
+discord::GenApiProc modifyGuild {guildId data} {
     rest::ModifyGuild [set ${sessionNs}::token] $guildId $data $cmd
 }
 
@@ -386,7 +385,7 @@ discord::GenApiProc modifyGuild { guildId data } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getChannels { guildId } {
+discord::GenApiProc getChannels {guildId} {
     rest::GetGuildChannels [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -403,7 +402,7 @@ discord::GenApiProc getChannels { guildId } {
 #                   are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc createChannel { guildId name data } {
+discord::GenApiProc createChannel {guildId name data} {
     dict set data name $name
     rest::CreateGuildChannel [set ${sessionNs}::token] $guildId $data $cmd
 }
@@ -419,12 +418,11 @@ discord::GenApiProc createChannel { guildId name data } {
 #                   the new position. All affected channels must be specified.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc changeChannelPositions { guildId data } {
-    set positions [list]
-    foreach list $data {
+discord::GenApiProc changeChannelPositions {guildId data} {
+    set positions [lmap list $data {
         lassign $list channelId position
-        lappend positions [dict create id $channelId position $position]
-    }
+        set list [dict create id $channelId position $position]
+    }]
     rest::ModifyGuildChannelPosition  [set ${sessionNs}::token] $guildId \
             $positions $cmd
 }
@@ -439,7 +437,7 @@ discord::GenApiProc changeChannelPositions { guildId data } {
 #       userId      User ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getMember { guildId userId } {
+discord::GenApiProc getMember {guildId userId} {
     rest::GetGuildMember [set ${sessionNs}::token] $guildId $userId $cmd
 }
 
@@ -456,7 +454,7 @@ discord::GenApiProc getMember { guildId userId } {
 #                   Defaults to 0.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getMembers { guildId {limit 1} {after 0} } {
+discord::GenApiProc getMembers {guildId {limit 1} {after 0}} {
     rest::ListGuildMembers [set ${sessionNs}::token] $guildId \
             [dict create limit $limit after $after] $cmd
 }
@@ -474,7 +472,7 @@ discord::GenApiProc getMembers { guildId {limit 1} {after 0} } {
 #                   nick, roles, mute, deaf. All keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc addMember { guildId userId accessToken data } {
+discord::GenApiProc addMember {guildId userId accessToken data} {
     dict set data access_token $accessToken
     rest::AddGuildMember [set ${sessionNs}::token] $guildId $userId $data $cmd
 }
@@ -491,7 +489,7 @@ discord::GenApiProc addMember { guildId userId accessToken data } {
 #                   nick, roles, mute, deaf, channel_id. All keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc modifyMember { guildId userId data } {
+discord::GenApiProc modifyMember {guildId userId data} {
     rest::ModifyGuildMember [set ${sessionNs}::token] $guildId $userId $data \
             $cmd
 }
@@ -507,7 +505,7 @@ discord::GenApiProc modifyMember { guildId userId data } {
 #                   nick
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc modifyBotnick { guildId data } {
+discord::GenApiProc modifyBotnick {guildId data} {
     rest::ModifyCurrentUserNick [set ${sessionNs}::token] $guildId $data $cmd
 }
 
@@ -522,7 +520,7 @@ discord::GenApiProc modifyBotnick { guildId data } {
 #       roleId      Role ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc addGuildMemberRole { guildId userId roleId } {
+discord::GenApiProc addGuildMemberRole {guildId userId roleId} {
     rest::AddGuildMemberRole [set ${sessionNs}::token] $guildId $userId \
             $roleId $cmd
 }
@@ -538,7 +536,7 @@ discord::GenApiProc addGuildMemberRole { guildId userId roleId } {
 #       roleId      Role ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc removeGuildMemberRole { guildId userId data } {
+discord::GenApiProc removeGuildMemberRole {guildId userId data} {
     rest::RemoveGuildMemberRole [set ${sessionNs}::token] $guildId $userId \
             $roleId $cmd
 }
@@ -553,7 +551,7 @@ discord::GenApiProc removeGuildMemberRole { guildId userId data } {
 #       userId      User ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc kickMember { guildId userId } {
+discord::GenApiProc kickMember {guildId userId} {
     rest::RemoveGuildMember [set ${sessionNs}::token] $guildId $userId $cmd
 }
 
@@ -566,7 +564,7 @@ discord::GenApiProc kickMember { guildId userId } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getBans { guildId } {
+discord::GenApiProc getBans {guildId} {
     rest::GetGuildBans [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -581,7 +579,7 @@ discord::GenApiProc getBans { guildId } {
 #       delMsgDays  Number of days to delete messages for.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc ban { guildId userId {delMsgDays 0} } {
+discord::GenApiProc ban {guildId userId {delMsgDays 0}} {
     rest::CreateGuildBan [set ${sessionNs}::token] $guildId $userId \
             [dict create delete-message-days $delMsgDays] $cmd
 }
@@ -596,7 +594,7 @@ discord::GenApiProc ban { guildId userId {delMsgDays 0} } {
 #       userId      User ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc unban { guildId userId } {
+discord::GenApiProc unban {guildId userId} {
     rest::RemoveGuildBan [set ${sessionNs}::token] $guildId $userId $cmd
 }
 
@@ -609,7 +607,7 @@ discord::GenApiProc unban { guildId userId } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getRoles { guildId } {
+discord::GenApiProc getRoles {guildId} {
     rest::GetGuildRoles [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -622,7 +620,7 @@ discord::GenApiProc getRoles { guildId } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc createRole { guildId } {
+discord::GenApiProc createRole {guildId} {
     rest::CreateGuildRole [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -638,7 +636,7 @@ discord::GenApiProc createRole { guildId } {
 #                   mentionable. All keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc batchModifyRoles { guildId data } {
+discord::GenApiProc batchModifyRoles {guildId data} {
     rest::BatchModifyGuildRole [set ${sessionNs}::token] $guildId $data $cmd
 }
 
@@ -655,7 +653,7 @@ discord::GenApiProc batchModifyRoles { guildId data } {
 #                   keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc modifyRole { guildId roleId data } {
+discord::GenApiProc modifyRole {guildId roleId data} {
     rest::ModifyGuildRole [set ${sessionNs}::token] $guildId $roleId \
             $data $cmd
 }
@@ -670,7 +668,7 @@ discord::GenApiProc modifyRole { guildId roleId data } {
 #       roleId      Role ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc deleteRole { guildId roleId } {
+discord::GenApiProc deleteRole {guildId roleId} {
     rest::DeleteGuildRole [set ${sessionNs}::token] $guildId $roleId $cmd
 }
 
@@ -684,7 +682,7 @@ discord::GenApiProc deleteRole { guildId roleId } {
 #       days        (optional) number of days to count prune for. Defauls to 1.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getPruneCount { guildId {days 1} } {
+discord::GenApiProc getPruneCount {guildId {days 1}} {
     rest::GetGuildPruneCount [set ${sessionNs}::token] $guildId \
             [dict create days $days] $cmd
 }
@@ -699,7 +697,7 @@ discord::GenApiProc getPruneCount { guildId {days 1} } {
 #       days        (optional) number of days to count prune for. Defauls to 1.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc prune { guildId {days 1} } {
+discord::GenApiProc prune {guildId {days 1}} {
     rest::BeginGuildPrune [set ${sessionNs}::token] $guildId \
             [dict create days $days] $cmd
 }
@@ -713,7 +711,7 @@ discord::GenApiProc prune { guildId {days 1} } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getGuildVoiceRegions { guildId } {
+discord::GenApiProc getGuildVoiceRegions {guildId} {
     rest::GetGuildVoiceRegions [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -726,7 +724,7 @@ discord::GenApiProc getGuildVoiceRegions { guildId } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getGuildInvites { guildId } {
+discord::GenApiProc getGuildInvites {guildId} {
     rest::GetGuildInvites [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -739,7 +737,7 @@ discord::GenApiProc getGuildInvites { guildId } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getIntegrations { guildId } {
+discord::GenApiProc getIntegrations {guildId} {
     rest::GetGuildIntegrations [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -754,7 +752,7 @@ discord::GenApiProc getIntegrations { guildId } {
 #                   type, id.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc createIntegration { guildId data } {
+discord::GenApiProc createIntegration {guildId data} {
     rest::CreateGuildIntegration [set ${sessionNs}::token] $guildId $data $cmd
 }
 
@@ -771,7 +769,7 @@ discord::GenApiProc createIntegration { guildId data } {
 #                       enable_emoticons.
 #       getResult       See "Shared Arguments".
 
-discord::GenApiProc modifyIntegration { guildId integrationId data } {
+discord::GenApiProc modifyIntegration {guildId integrationId data} {
     rest::ModifyGuildIntegration [set ${sessionNs}::token] $guildId \
             $integrationId $data $cmd
 }
@@ -786,7 +784,7 @@ discord::GenApiProc modifyIntegration { guildId integrationId data } {
 #       integrationId   Integration ID.
 #       getResult       See "Shared Arguments".
 
-discord::GenApiProc deleteIntegration { guildId integrationId } {
+discord::GenApiProc deleteIntegration {guildId integrationId} {
     rest::DeleteGuildIntegration [set ${sessionNs}::token] $guildId \
             $integrationId $cmd
 }
@@ -801,7 +799,7 @@ discord::GenApiProc deleteIntegration { guildId integrationId } {
 #       integrationId   Integration ID.
 #       getResult       See "Shared Arguments".
 
-discord::GenApiProc syncIntegration { guildId integrationId } {
+discord::GenApiProc syncIntegration {guildId integrationId} {
     rest::SyncGuildIntegration [set ${sessionNs}::token] $guildId \
             $integrationId $cmd
 }
@@ -815,7 +813,7 @@ discord::GenApiProc syncIntegration { guildId integrationId } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getGuildEmbed { guildId } {
+discord::GenApiProc getGuildEmbed {guildId} {
     rest::GetGuildEmbed [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -828,7 +826,7 @@ discord::GenApiProc getGuildEmbed { guildId } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getGuildVanityUrl { guildId } {
+discord::GenApiProc getGuildVanityUrl {guildId} {
     rest::GetGuildVanityUrl [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -843,7 +841,7 @@ discord::GenApiProc getGuildVanityUrl { guildId } {
 #                   if one of enabled, channel_id. All keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc modifyGuildEmbed { guildId data } {
+discord::GenApiProc modifyGuildEmbed {guildId data} {
     rest::ModifyGuildEmbed [set ${sessionNs}::token] $guildId $data $cmd
 }
 
@@ -857,7 +855,7 @@ discord::GenApiProc modifyGuildEmbed { guildId data } {
 #       data        Additional queries
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getAuditLog { guildId {data {}} } {
+discord::GenApiProc getAuditLog {guildId {data {}}} {
     rest::GetGuildAuditLog [set ${sessionNs}::token] $guildId $data $cmd
 }
 
@@ -869,7 +867,7 @@ discord::GenApiProc getAuditLog { guildId {data {}} } {
 #       sessionNs   Name of session namespace.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getCurrentUser { } {
+discord::GenApiProc getCurrentUser {} {
     rest::GetCurrentUser [set ${sessionNs}::token] $cmd
 }
 
@@ -882,7 +880,7 @@ discord::GenApiProc getCurrentUser { } {
 #       userId      (optional) user ID. Defaults to @me.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getUser { {userId @me} } {
+discord::GenApiProc getUser {{userId @me}} {
     rest::GetUser [set ${sessionNs}::token] $userId $cmd
 }
 
@@ -896,7 +894,7 @@ discord::GenApiProc getUser { {userId @me} } {
 #                   username, avator. All keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc modifyCurrentUser { data } {
+discord::GenApiProc modifyCurrentUser {data} {
     rest::ModifyCurrentUser [set ${sessionNs}::token] $data $cmd
 }
 
@@ -908,7 +906,7 @@ discord::GenApiProc modifyCurrentUser { data } {
 #       sessionNs   Name of session namespace.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getGuilds { } {
+discord::GenApiProc getGuilds {} {
     rest::GetCurrentUserGuilds [set ${sessionNs}::token] $cmd
 }
 
@@ -921,7 +919,7 @@ discord::GenApiProc getGuilds { } {
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc leaveGuild { guildId } {
+discord::GenApiProc leaveGuild {guildId} {
     rest::LeaveGuild [set ${sessionNs}::token] $guildId $cmd
 }
 
@@ -933,7 +931,7 @@ discord::GenApiProc leaveGuild { guildId } {
 #       sessionNs   Name of session namespace.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getDMs { } {
+discord::GenApiProc getDMs {} {
     rest::GetUserDMs [set ${sessionNs}::token] $cmd
 }
 
@@ -946,7 +944,7 @@ discord::GenApiProc getDMs { } {
 #       userId      userId
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc createDM { userId } {
+discord::GenApiProc createDM {userId} {
     rest::CreateDM [set ${sessionNs}::token] \
             [dict create recipient_id $userId] $cmd
 }
@@ -959,7 +957,7 @@ discord::GenApiProc createDM { userId } {
 #       sessionNs   Name of session namespace.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getConnections { } {
+discord::GenApiProc getConnections {} {
     rest::GetUsersConnections [set ${sessionNs}::token] $cmd
 }
 
@@ -971,7 +969,7 @@ discord::GenApiProc getConnections { } {
 #       sessionNs   Name of session namespace.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getVoiceRegions { } {
+discord::GenApiProc getVoiceRegions {} {
     rest::ListVoiceRegions [set ${sessionNs}::token] $cmd
 }
 
@@ -989,7 +987,7 @@ discord::GenApiProc getVoiceRegions { } {
 #       See "Shared Results". Also raises an exception if a DM channel is not
 #       opened for the user.
 
-proc discord::sendDM { sessionNs userId content {getResult 0} } {
+proc discord::sendDM {sessionNs userId content {getResult 0}} {
     variable log
     set channelId {}
     dict for {id dmChan} [set ${sessionNs}::dmChannels] {
@@ -1021,7 +1019,7 @@ proc discord::sendDM { sessionNs userId content {getResult 0} } {
 #       userId      User ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc closeDM { userId } {
+discord::GenApiProc closeDM {userId} {
     set channelId {}
     dict for {id dmChan} [set ${sessionNs}::dmChannels] {
         set recipients [dict get $dmChan recipients]

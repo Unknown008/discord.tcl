@@ -125,11 +125,12 @@ namespace eval discord {
 #       Returns the name of a namespace that is created for the session if the
 #       connection is sucessful, or an empty string otherwise.
 
-proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
+proc discord::connect {token {cmd {}} {shardInfo {0 1}}} {
     variable log
     set sessionNs [CreateSession]
     if {[catch {gateway::connect $token [list ::discord::SetupEventCallbacks \
-            $cmd $sessionNs] $shardInfo} gatewayNs options]} {
+        $cmd $sessionNs] $shardInfo} gatewayNs options]
+    } {
         ${log}::error "connect: $gatewayNs"
         return -options $options $gatewayNs
     }
@@ -137,10 +138,7 @@ proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
     set ${sessionNs}::gatewayNs $gatewayNs
     set ${sessionNs}::token $token
     set ${sessionNs}::self [dict create]
-    #set ${sessionNs}::guilds [dict create]
     set ${sessionNs}::dmChannels [dict create]
-    #set ${sessionNs}::users [dict create]
-    #set ${sessionNs}::channels [dict create]
     set ${sessionNs}::callbacks $DefCallbacks
     return $sessionNs
 }
@@ -156,7 +154,7 @@ proc discord::connect { token {cmd {}} {shardInfo {0 1}} } {
 #       Deletes the session namespace. Raises an error if the namespace does not
 #       exist.
 
-proc discord::disconnect { sessionNs } {
+proc discord::disconnect {sessionNs} {
     variable log
     if {![namespace exists $sessionNs]} {
         return -code error "Unknown session: $sessionNs"
@@ -187,7 +185,7 @@ proc discord::disconnect { sessionNs } {
 # Results:
 #       Returns 1 if the event is supported, or 0 otherwise.
 
-proc discord::setCallback { sessionNs event cmd } {
+proc discord::setCallback {sessionNs event cmd} {
     variable log
     if {![dict exists [set ${sessionNs}::callbacks] $event]} {
         ${log}::error "Event not recognized: '$event'"
@@ -213,8 +211,7 @@ proc discord::CreateSession { } {
     variable SessionId
     set sessionNs ::discord::session::$SessionId
     incr SessionId
-    namespace eval $sessionNs {
-    }
+    namespace eval $sessionNs {}
     set ${sessionNs}::log [::logger::init $sessionNs]
     return $sessionNs
 }
@@ -229,7 +226,7 @@ proc discord::CreateSession { } {
 # Results:
 #       None.
 
-proc discord::DeleteSession { sessionNs } {
+proc discord::DeleteSession {sessionNs} {
     [set ${sessionNs}::log]::delete
     namespace delete $sessionNs
 }
@@ -247,7 +244,7 @@ proc discord::DeleteSession { sessionNs } {
 # Results:
 #       Returns the return value of the 'after' command.
 
-proc discord::Every { interval script } {
+proc discord::Every {interval script} {
     variable EveryIds
     if {$interval eq "cancel"} {
         catch {after cancel $EveryIds($script)}
@@ -276,7 +273,7 @@ proc discord::Every { interval script } {
 # Results:
 #       None.
 
-proc discord::SetupEventCallbacks { cmd sessionNs sock } {
+proc discord::SetupEventCallbacks {cmd sessionNs sock} {
     foreach event [dict keys [set ${sessionNs}::callbacks]] {
         gateway::setCallback $sock $event \
                 [list ::discord::ManageEvents $sessionNs]
@@ -299,13 +296,15 @@ proc discord::SetupEventCallbacks { cmd sessionNs sock } {
 # Results:
 #       None.
 
-proc discord::ManageEvents { sessionNs event data } {
+proc discord::ManageEvents {sessionNs event data} {
     variable EventToProc
     if {![catch {dict get $EventToProc $event} procName]} { 
         callback::event::$procName $sessionNs $event $data
     }
-    if {![catch {dict get [set ${sessionNs}::callbacks] $event} cmd]
-            && [llength $cmd] > 0} {
+    if {
+        ![catch {dict get [set ${sessionNs}::callbacks] $event} cmd] 
+        && [llength $cmd] > 0
+    } {
         {*}$cmd $sessionNs $event $data
     }
     return
