@@ -167,7 +167,7 @@ proc discord::callback::event::Guild {sessionNs event data} {
         GUILD_CREATE {
             set existing [guild eval {SELECT 1 FROM guild WHERE guildId = :id}]
             if {$existing != ""} {
-                guild eval {UPDATE guild SET data = :data}
+                guild eval {UPDATE guild SET data = :data WHERE guildId = :id}
             } else {
                 guild eval {INSERT INTO guild VALUES (:id, :data)}
             }
