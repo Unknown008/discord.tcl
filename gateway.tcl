@@ -27,7 +27,7 @@ namespace eval discord::gateway {
     variable log [::logger::init discord::gateway]
     ${log}::setlevel debug
     
-    variable RpcCloseEventCode 0
+    variable GatewayCloseEventCode 0
 
     variable LogWsMsg 0
     variable MsgLogLevel debug
@@ -44,46 +44,7 @@ namespace eval discord::gateway {
     variable Gateways [dict create]
     variable HandlerReExcute ""
 
-    variable EventCallbacks {
-        READY                       {}
-        RESUMED                     {}
-        CHANNEL_CREATE              {}
-        CHANNEL_UPDATE              {}
-        CHANNEL_DELETE              {}
-        GUILD_CREATE                {}
-        GUILD_UPDATE                {}
-        GUILD_DELETE                {}
-        GUILD_BAN_ADD               {}
-        GUILD_BAN_REMOVE            {}
-        GUILD_EMOJIS_UPDATE         {}
-        GUILD_INTEGRATIONS_UPDATE   {}
-        GUILD_MEMBER_ADD            {}
-        GUILD_MEMBER_REMOVE         {}
-        GUILD_MEMBER_UPDATE         {}
-        GUILD_MEMBERS_CHUNK         {}
-        GUILD_ROLE_CREATE           {}
-        GUILD_ROLE_UPDATE           {}
-        GUILD_ROLE_DELETE           {}
-        INVITE_CREATE               {}
-        INVITE_DELETE               {}
-        MESSAGE_CREATE              {}
-        MESSAGE_UPDATE              {}
-        MESSAGE_DELETE              {}
-        MESSAGE_DELETE_BULK         {}
-        PRESENCE_UPDATE             {}
-        TYPING_START                {}
-        USER_UPDATE                 {}
-        USER_SETTINGS_UPDATE        {}
-        VOICE_STATE_UPDATE          {}
-        VOICE_SERVER_UPDATE         {}
-        MESSAGE_REACTION_ADD        {}
-        MESSAGE_REACTION_REMOVE     {}
-        MESSAGE_REACTION_REMOVE_ALL {}
-        MESSAGE_ACK                 {}
-        CHANNEL_PINS_ACK            {}
-        CHANNEL_PINS_UPDATE         {}
-        PRESENCES_REPLACE           {}
-    }
+    variable EventCallbacks $::discord::defCallbacks
 
     # Compression only used for Dispatch "READY" event. Set DefCompress to true
     # before connecting. zlib inflate doesn't work right now.
@@ -552,7 +513,7 @@ proc discord::gateway::CheckOp {op} {
 
 proc discord::gateway::EventHandler {sock msg} {
     variable log
-    variable RpcCloseEventCode
+    variable GatewayCloseEventCode
     set t [dict get $msg t]
     set s [dict get $msg s]
     set d [dict get $msg d]
@@ -578,7 +539,7 @@ proc discord::gateway::EventHandler {sock msg} {
             set interval [GetGatewayInfo $sock heartbeat_interval]
             ::discord::gateway::Every $interval \
                 [list ::discord::gateway::Send $sock Heartbeat]
-            set RpcCloseEventCode 0
+            set GatewayCloseEventCode 0
 
             DeleteUnusedGateways $sock
         }
@@ -636,8 +597,8 @@ proc discord::gateway::OpHandler {sock msg} {
             after idle [list discord::gateway::Send $sock Resume]
         }
         INVALID_SESSION {
-            variable RpcCloseEventCode
-            set RpcCloseEventCode 0
+            variable GatewayCloseEventCode
+            set GatewayCloseEventCode 0
             after idle [list discord::gateway::Send $sock Identify]
         }
         HELLO {
@@ -702,7 +663,7 @@ proc discord::gateway::TextHandler {sock msg} {
 
 proc discord::gateway::Handler {sock type msg} {
     variable log
-    variable RpcCloseEventCode
+    variable GatewayCloseEventCode
     variable Gateways
     variable HandlerReExcute
     ${log}::info "type: $type\nHandler: msg: $msg"
@@ -729,7 +690,7 @@ proc discord::gateway::Handler {sock type msg} {
             if {[llength $cmd] > 0} {
                 ::[lindex $cmd 0] {*}[lrange $cmd 1 end] $sock
             }
-            if {$RpcCloseEventCode in [list 0 1000]} {
+            if {$GatewayCloseEventCode in [list 0 1000]} {
                 after idle [list discord::gateway::Send $sock Identify]
                 ${log}::notice "Connected."
             } else {
@@ -740,17 +701,17 @@ proc discord::gateway::Handler {sock type msg} {
         }
         close {
             ::discord::gateway::Every cancel \
-                    [list ::discord::gateway::Send $sock Heartbeat]
+                [list ::discord::gateway::Send $sock Heartbeat]
             after cancel [list ::discord::gateway::SetGatewayInfo $sock \
                 sendCount 0]
             ${log}::notice "Connection closed from $sock."
-            set RpcCloseEventCode [lindex $msg 0]
+            set GatewayCloseEventCode [lindex $msg 0]
         }
         disconnect {
             variable Gateways
-            variable RpcCloseEventCodes
+            variable GatewayCloseEventCodes
             ${log}::notice "Disconnected from $sock"
-            if {$RpcCloseEventCode ni [dict keys $RpcCloseEventCodes]} {
+            if {$GatewayCloseEventCode ni [dict keys $RpcCloseEventCodes]} {
                 set interval [GetGatewayInfo $sock heartbeat_interval]
                 set gatewayNs [dict get $Gateways $sock]
                 set sessionNs ::discord::session::[expr {
@@ -759,7 +720,8 @@ proc discord::gateway::Handler {sock type msg} {
                 after $interval [list ::discord::gateway::reconnect \
                     $gatewayNs $sessionNs $sock]
             } else {
-                ${log}::notice [dict get $RpcCloseEventCodes $RpcCloseEventCode]
+                ${log}::notice \
+                    [dict get $GatewayCloseEventCodes $GatewayCloseEventCode]
                 exit
             }
         }
