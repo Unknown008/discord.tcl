@@ -4,6 +4,7 @@
 #       API's channel resource.
 #
 # Copyright (c) 2016, Yixin Zhang
+# Copyright (c) 2018-2020, Jerry Yong
 #
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
@@ -208,12 +209,12 @@ proc discord::rest::UploadFile {token channelId filename type data {cmd {}}} {
     if {[dict exists $data file]} {
         set value [dict get $data file]
         append body "$delimiter\r\n${dispoPrefix}name=\"file\"; " \
-                "filename=\"$filename\";\r\n" \
-                "Content-Type: $type\r\n\r\n$value"
+            "filename=\"$filename\";\r\n" \
+            "Content-Type: $type\r\n\r\n$value"
     }
     append body $closeDelimiter
     Send $token POST "/channels/$channelId/messages" $body $cmd \
-            -type "multipart/form-data; boundary=$boundary"
+        -type "multipart/form-data; boundary=$boundary"
 }
 
 # discord::rest::EditMessage --
@@ -266,7 +267,7 @@ proc discord::rest::EditMessage {token channelId messageId data {cmd {}}} {
     }
     set body [DictToJson $body $spec]
     Send $token PATCH "/channels/$channelId/messages/$messageId" $body $cmd \
-            -type "application/json"
+        -type "application/json"
 }
 
 # discord::rest::DeleteMessage --
@@ -308,7 +309,7 @@ proc discord::rest::BulkDeleteMessages {token channelId data {cmd {}}} {
     }
     set body [DictToJson $data $spec]
     Send $token POST "/channels/$channelId/messages/bulk-delete" $body $cmd \
-            -type "application/json"
+        -type "application/json"
 }
 
 # discord::rest::EditChannelPermissions --
@@ -325,7 +326,7 @@ proc discord::rest::BulkDeleteMessages {token channelId data {cmd {}}} {
 #                   received.
 #
 # Results:
-#       Passes an invite dictionary to the callback.
+#       None.
 
 proc discord::rest::EditChannelPermissions {
   token channelId overwriteId data {cmd {}}
@@ -337,7 +338,7 @@ proc discord::rest::EditChannelPermissions {
     }
     set body [DictToJson $data $spec]
     Send $token PUT "/channels/$channelId/permissions/$overwriteId" $body $cmd \
-            -type "application/json"
+        -type "application/json"
 }
 
 # discord::rest::DeleteChannelPermission --
@@ -402,7 +403,7 @@ proc discord::rest::CreateChannelInvite {token channelId data {cmd {}}} {
     }
     set body [DictToJson $data $spec]
     Send $token POST "/channels/$channelId/invites" $body $cmd \
-            -type "application/json"
+        -type "application/json"
 }
 
 # discord::rest::TriggerTypingIndicator --
@@ -420,7 +421,7 @@ proc discord::rest::CreateChannelInvite {token channelId data {cmd {}}} {
 
 proc discord::rest::TriggerTypingIndicator {token channelId {cmd {}}} {
     Send $token POST "/channels/$channelId/typing" {} $cmd \
-            -headers [list Content-Length 0]
+        -headers [list Content-Length 0]
 }
 
 # discord::rest::GetPinnedMessages --
@@ -458,7 +459,7 @@ proc discord::rest::AddPinnedChannelMessage {
   token channelId messageId {cmd {}}
 } {
     Send $token PUT "/channels/$channelId/pins/$messageId" {} $cmd \
-            -headers [list Content-Length 0]
+        -headers [list Content-Length 0]
 }
 
 # discord::rest::DeletePinnedChannelMessage --
@@ -521,4 +522,139 @@ proc discord::rest::GroupDMAddRecipient {token channelId userId data {cmd {}}} {
 
 proc discord::rest::GroupDMRemoveRecipient {token channelId userId {cmd {}}} {
     Send $token DELETE "/channels/$channelId/recipients/$userId" {} $cmd
+}
+
+
+# discord::rest::CreateReaction --
+#
+#       Adds an emoji to a message
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       emoji       Emoji.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       None.
+
+proc discord::rest::CreateReaction {token channelId messageId emoji {cmd {}}} {
+    Send $token PUT \
+        "/channels/$channelId/messages/$messageId/reactions/$emoji/@me" {} $cmd
+}
+
+# discord::rest::DeleteOwnReaction --
+#
+#       Deletes an emoji the user previously added to a message
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       emoji       Emoji.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       None.
+
+proc discord::rest::DeleteOwnReaction {
+    token channelId messageId emoji {cmd {}}
+} {
+    Send $token DELETE \
+        "/channels/$channelId/messages/$messageId/reactions/$emoji/@me" {} $cmd
+}
+
+# discord::rest::DeleteReaction --
+#
+#       Deletes an emoji from a message previously added by another user.
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       emoji       Emoji.
+#       userId      The user ID.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       None.
+
+proc discord::rest::DeleteReaction {
+    token channelId messageId emoji userId {cmd {}}
+} {
+    Send $token DELETE \
+        "/channels/$channelId/messages/$messageId/reactions/$emoji/$userId" {} \
+            $cmd
+}
+
+# discord::rest::GetReactions --
+#
+#       Gets the users who added the emoji to a certain message
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       emoji       Emoji.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       List of user objects.
+
+proc discord::rest::GetReactions {
+    token channelId messageId emoji {cmd {}}
+} {
+    set query [::http::formatQuery {*}$data]
+    Send $token GET \
+        "/channels/$channelId/messages/$messageId/reactions/$emoji?$query" {} \
+            $cmd
+}
+
+# discord::rest::DeleteAllReactions --
+#
+#       Deletes all reactions on a message (requires MANAGE_MESSAGES permission)
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       None.
+
+proc discord::rest::DeleteAllReactions {
+    token channelId messageId {cmd {}}
+} {
+    Send $token DELETE \
+        "/channels/$channelId/messages/$messageId/reactions" {} $cmd
+}
+
+# discord::rest::DeleteAllReactionsForEmoji --
+#
+#       Deletes all reactions on a message (requires MANAGE_MESSAGES permission)
+#       for a certain emoji
+#
+# Arguments:
+#       token       Bot token or OAuth2 bearer token.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       emoji       The emoji.
+#       cmd         (optional) callback procedure invoked after a response is
+#                   received.
+#
+# Results:
+#       None.
+
+proc discord::rest::DeleteAllReactionsForEmoji {
+    token channelId messageId emoji {cmd {}}
+} {
+    Send $token DELETE \
+        "/channels/$channelId/messages/$messageId/reactions/$emoji" {} $cmd
 }

@@ -3,13 +3,14 @@
 #       This file implements the Tcl code for working with Discord permissions.
 #
 # Copyright (c) 2016, Yixin Zhang
+# Copyright (c) 2018-2020, Jerry Yong
 #
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
 
 namespace eval discord {
     namespace export getPermList setPermissions hasPermissions \
-            getPermissionDescription
+        getPermissionDescription
     namespace ensemble create
 
     variable noPermissions 0x00000000
@@ -44,7 +45,7 @@ namespace eval discord {
             messages in text channels.
         }
         SEND_MESSAGES           0x00000800  {
-            Allows for sending messages in a channel..
+            Allows for sending messages in a channel.
         }
         SEND_TTS_MESSAGES       0x00001000  {
             Allows for sending of /tts messages.
@@ -206,8 +207,8 @@ proc discord::hasPermissions {permissions permList {minMatch 0}} {
         }
     }
     return [expr {
-        (($minMatch == 0) && ($permMatch >= [llength $permList]))
-        || (($minMatch != 0) && ($permMatch >= $minMatch))
+        (($minMatch == 0) && ($permMatch >= [llength $permList])) ||
+        (($minMatch != 0) && ($permMatch >= $minMatch))
     }]
 }
 

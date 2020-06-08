@@ -1,8 +1,10 @@
 # callback.tcl --
 #
 #       This file implements the Tcl code for callback procedures.
+#       Essentially updating the local database based on events
 #
 # Copyright (c) 2016, Yixin Zhang
+# Copyright (c) 2018-2020, Jerry Yong
 #
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
@@ -53,15 +55,40 @@ namespace eval discord::callback::event {
 #       Updates variables in session namespace.
 
 proc discord::callback::event::Ready {sessionNs event data} {
+    set log [set ${sessionNs}::log]
+    ${log}::info "Handling ready event"
+
     set ${sessionNs}::self [dict get $data user]
     foreach dmChannel [dict get $data private_channels] {
         dict set ${sessionNs}::dmChannels [dict get $dmChannel id] $dmChannel
     }
-    set ${sessionNs}::sessionId [dict get $data session_id]
+    set ${sessionNs}::SessionId [dict get $data session_id]
 
-    set log [set ${sessionNs}::log]
     ${log}::debug "Ready"
-    return
+}
+
+# discord::callback::event::Resumed --
+#
+#       Callback procedure for Dispatch event Resumed.
+#
+# Results:
+#       Log information.
+
+proc discord::callback::event::Resumed {sessionNs event data} {
+    set log [set ${sessionNs}::log]
+    ${log}::info "Resumed session"
+}
+
+# discord::callback::event::Log --
+#
+#       Callback procedure for Dispatch various events that only get logged.
+#
+# Results:
+#       Log information.
+
+proc discord::callback::event::Log {sessionNs event data} {
+    set log [set ${sessionNs}::log]
+    ${log}::info "$event: $data"
 }
 
 # discord::callback::event::Channel --
@@ -73,12 +100,14 @@ proc discord::callback::event::Ready {sessionNs event data} {
 
 proc discord::callback::event::Channel {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Handling dispatch channel"
+
     set id [dict get $data id]
     set typeNames [dict create {*}$::discord::ChannelTypes]
     set type [dict get $data type]
     if {![dict exists $typeNames $type]} {
-        ${log}::warn "ChannelCreate: Unknown type '$type': $data"
-        return 0
+        ${log}::error "Unknown type '$type': $data"
+        return
     }
     set typeName [dict get $typeNames $type]
     if {$typeName eq "DM"} {
@@ -98,17 +127,16 @@ proc discord::callback::event::Channel {sessionNs event data} {
             }
         }
         set users [dict get $data recipients]
-        ${log}::debug "$typeName $event:"
+        ${log}::debug "typeName: $typeName, $event"
         foreach user $users {
             set userId [dict get $user id]
             foreach field {username discriminator} {
                 set $field [dict get $user $field]
             }
-            ${log}::debug "${username}#$discriminator ($userId)"
+            ${log}::debug "user: ${username}#$discriminator ($userId)"
         }
     } else {
         set guildId [dict get $data guild_id]
-        #set channels [dict get [set ${sessionNs}::guilds] $guildId channels]
         set guildData [guild eval {
             SELECT data FROM guild WHERE guildId = :guildId
         }]
@@ -148,9 +176,8 @@ proc discord::callback::event::Channel {sessionNs event data} {
             UPDATE guild SET data = :guildData WHERE guildId = :guildId
         }
         set name [dict get $data name]
-        ${log}::debug "$typeName $event: '$name' ($id)"
+        ${log}::debug "typeName: $typeName, $event '$name' ($id)"
     }
-    return
 }
 
 # discord::callback::event::Guild --
@@ -162,6 +189,7 @@ proc discord::callback::event::Channel {sessionNs event data} {
 
 proc discord::callback::event::Guild {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Dispatching guild"
     set id [dict get $data id]
     switch $event {
         GUILD_CREATE {
@@ -225,9 +253,10 @@ proc discord::callback::event::Guild {sessionNs event data} {
         }
     }
 
-    set name [dict get $data name]
-    ${log}::debug "$event: '$name' ($id)"
-    return
+    if {[dict exists $data name]} {
+        set name [dict get $data name]
+        ${log}::debug "$event: '$name' ($id)"
+    }
 }
 
 # discord::callback::event::GuildBan --
@@ -239,6 +268,7 @@ proc discord::callback::event::Guild {sessionNs event data} {
 
 proc discord::callback::event::GuildBan {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Dispatching guild ban"
     set user [dict get $data user]
     set guildId [dict get $data guild_id]
     switch $event {
@@ -252,11 +282,11 @@ proc discord::callback::event::GuildBan {sessionNs event data} {
             foreach field {id username discriminator} {
                 set $field [dict get $user $field]
             }
-            ${log}::debug [join [list "$event '$guildName' ($guildId):" \
-                    "${username}#$discriminator ($id)"]]
+            set msg "$event '$guildName' ($guildId): "
+            append msg "${username}#$discriminator ($id)"
+            ${log}::debug $msg
         }
     }
-    return
 }
 
 # discord::callback::event::GuildEmojisUpdate --
@@ -268,6 +298,7 @@ proc discord::callback::event::GuildBan {sessionNs event data} {
 
 proc discord::callback::event::GuildEmojisUpdate {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Updating guild emojis"
     set guildId [dict get $data guild_id]
     set guildData [guild eval {SELECT data FROM guild WHERE guildId = :guildId}]
     set guildData {*}$guildData
@@ -288,6 +319,7 @@ proc discord::callback::event::GuildIntegrationsUpdate {
     sessionNs event data
 } {
     set log [set ${sessionNs}::log]
+    ${log}::info "Updating guild integrations"
     set guildId [dict get $data guild_id]
     set guildData [guild eval {SELECT data FROM guild WHERE guildId = :guildId}]
     set guildData {*}$guildData
@@ -304,6 +336,7 @@ proc discord::callback::event::GuildIntegrationsUpdate {
 
 proc discord::callback::event::GuildMember {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Updating guild members"
     set user [dict get $data user]
     set id [dict get $user id]
     set guildId [dict get $data guild_id]
@@ -342,9 +375,8 @@ proc discord::callback::event::GuildMember {sessionNs event data} {
     foreach field {username discriminator} {
         set $field [dict get $user $field]
     }
-    ${log}::debug [join [list "$event '$guildName' ($guildId):" \
-            "${username}#$discriminator ($id)"]]
-    return
+    set msg "$event: '$guildName' ($guildId): ${username}#$discriminator ($id)"
+    ${log}::debug $msg
 }
 
 # discord::callback::event::GuildMembersChunk -
@@ -356,15 +388,15 @@ proc discord::callback::event::GuildMember {sessionNs event data} {
 
 proc discord::callback::event::GuildMembersChunk {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Dispatching guild members"
     set guildId [dict get $data guild_id]
     set members [dict get $data members]
     set guildData [guild eval {SELECT data FROM guild WHERE guildId = :guildId}]
     set guildData {*}$guildData
     set guildName [dict get $guildData name]
-    ${log}::debug [join [list \
-            "$event: Received [llength $members] offline members in" \
-            "'$guildName' ($guildId)"]]
-    return
+    set msg "$event: Received [llength $members] offline members in "
+    append msg "'$guildName' ($guildId)"
+    ${log}::debug $msg
 }
 
 # discord::callback::event::GuildRole --
@@ -377,6 +409,7 @@ proc discord::callback::event::GuildMembersChunk {sessionNs event data} {
 
 proc discord::callback::event::GuildRole {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Dispatching guild roles"
     set guildId [dict get $data guild_id]
     set guildData [guild eval {SELECT data FROM guild WHERE guildId = :guildId}]
     set guildData {*}$guildData
@@ -421,7 +454,6 @@ proc discord::callback::event::GuildRole {sessionNs event data} {
     }
     set guildName [dict get $guildData name]
     ${log}::debug "$event '$guildName' ($guildId): '$name' ($id)"
-    return
 }
 
 # discord::callback::event::Message --
@@ -433,6 +465,7 @@ proc discord::callback::event::GuildRole {sessionNs event data} {
 
 proc discord::callback::event::Message {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Dispatching message"
     set id [dict get $data id]
     set channelId [dict get $data channel_id]
     switch $event {
@@ -449,7 +482,6 @@ proc discord::callback::event::Message {sessionNs event data} {
             ${log}::debug "$event: $data"
         }
     }
-    return
 }
 
 # discord::callback::event::MessageDeleteBulk --
@@ -461,10 +493,10 @@ proc discord::callback::event::Message {sessionNs event data} {
 
 proc discord::callback::event::MessageDeleteBulk {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Dispatching message delete bulk"
     set ids [dict get $data ids]
     set channelId [dict get $data channel_id]
     ${log}::debug "$event: [llength $ids] messages deleted from $channelId."
-    return
 }
 
 # discord::callback::event::PresenceUpdate --
@@ -476,6 +508,7 @@ proc discord::callback::event::MessageDeleteBulk {sessionNs event data} {
 
 proc discord::callback::event::PresenceUpdate {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Updating presence"
     set user [dict get $data user]
     set userId [dict get $user id]
     set userData [lindex [guild eval {
@@ -527,6 +560,7 @@ proc discord::callback::event::PresenceUpdate {sessionNs event data} {
 
 proc discord::callback::event::UserUpdate {sessionNs event data} {
     set log [set ${sessionNs}::log]
+    ${log}::info "Updating user"
     set id [dict get $data id]
     set userData [guild eval {SELECT data FROM users WHERE userId = :id}]
     set userData {*}$userData

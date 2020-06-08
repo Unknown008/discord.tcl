@@ -4,6 +4,7 @@
 #       API's invite resource.
 #
 # Copyright (c) 2016, Yixin Zhang
+# Copyright (c) 2018-2020, Jerry Yong
 #
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
@@ -42,21 +43,4 @@ proc discord::rest::GetInvite {token inviteCode {cmd {}}} {
 
 proc discord::rest::DeleteInvite {token inviteCode {cmd {}}} {
     Send $token DELETE "/invites/$inviteCode" {} $cmd
-}
-
-# discord::rest::AcceptInvite --
-#
-#       Accept an invite.
-#
-# Arguments:
-#       token       Bot token or OAuth2 bearer token.
-#       inviteCode  Invite Code.
-#       cmd         (optional) callback procedure invoked after a response is
-#                   received.
-#
-# Results:
-#       Passes an invite dictionary to the callback.
-
-proc discord::rest::DeleteInvite {token inviteCode {cmd {}}} {
-    Send $token POST "/invites/$inviteCode" {} $cmd
 }

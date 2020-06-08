@@ -1,26 +1,31 @@
-# discord.tcl 0.6.0
+# discord.tcl 0.7.0
 Discord API library writtten in Tcl.
 Tested with Tcl 8.6.
 Supports Discord Gateway API version 6.
 
-### Status
+### Status/TODO
 
-- Gateway API
-  - All events except Request Guild Members, Message Reaction Add/Remove.
-- HTTP API
-  - All Channel related requests.
-  - All Guild related requests.
-  - All Invite related requests.
-  - All User related requests.
-  - All Voice related requests.
-  - All Webhook related requests except Slack/Github Webhooks.
-- Callbacks can be registered for all Dispatch events
-- Event callbacks not implemented: Typing Start, User Settings Update,
-  Voice State Update, Voice Server Update.
-- Library API not implemented:
-  - For whitelisted bots: Group DM Add/Remove Recipient, Create Guild,
-    Delete Guild, Create Group DM.
-  - Webhooks
+- HEARTBEAT and HEARTBEAT_ACK response not implemented. Currently only taking 
+  the heartbeat interval from the HELLO payload and ignoring HEARTBEAT and 
+  HEARTBEAT_ACK altogether. The bot still runs fine because it will attempt to 
+  reconnect on the next failed HEARTBEAT *sent*.
+- [Gateway Intents](https://discord.com/developers/docs/topics/gateway#gateway-intents) not implemented yet.
+- Need to do a full review on [Rate Limits](https://discord.com/developers/docs/topics/gateway#rate-limiting).
+- Basic sharding is currently implemented. It ain't broke per se, so not fixing 
+  it for now. Also includes [this](https://discord.com/developers/docs/topics/gateway#get-gateway-bot).
+- [User Status](https://discord.com/developers/docs/topics/gateway#update-status) not implemented
+- Request Guild Members Gateway opcode not implemented
+- Most voice-related stuff not implemented; only the basic ones are implemented
+
+Not sure yet what to do with those from previous owner todo list:
+- Test cases for "pure" procs, send HTTP requests to test both HTTP responses
+  and Gateway events.
+- Find out why *zlib inflate* fails.
+- Use "return -code error -errorcode ..." when possible for standardized
+  exception handling. See ThrowError in websocket from tcllib for an example.
+- Use the *try* command.
+- Create a tcltest custommatch to check -errorcode.
+- Test HTTP API and Gateway API with local server.
 
 ### Libraries
 
@@ -29,8 +34,8 @@ Supports Discord Gateway API version 6.
 - [TLS 1.6.7](https://sourceforge.net/projects/tls) (*tls*)
 
 ### Usage
-Check out [tclqBot](https://github.com/qwename/tclqBot) for a bot written
-with this library.
+Check out [MarshtompBot](https://github.com/Unknown008/MarshtompBot) for a bot 
+written with this library.
 
 DIY: For when you feel like writing your own discord.tcl.
 ```
@@ -38,7 +43,7 @@ package require discord
 
 ${discord::log}::setlevel info
 
-proc messageCreate { event data } {
+proc messageCreate {event data} {
     set timestamp [dict get $data timestamp]
     set username [dict get $data author username]
     set discriminator [dict get $data author discriminator]
@@ -86,22 +91,3 @@ setting up a local HTTP(S) server. The main proc is LocalServerSetupAll.
 
 - [Tcl Developer Xchange](https://tcl.tk)
 - [Coding style guide](http://www.tcl.tk/doc/styleGuide.pdf)
-
-### TODO
-
-- Message queue for rate-limited requests.
-- Find out HTTP API Batch Modify Guild Role payload format.
-- Implement Request Guild Members Gateway opcode.
-- Implement all Gateway Dispatch event callbacks.
-- Test cases for "pure" procs, send HTTP requests to test both HTTP responses
-  and Gateway events.
-- Find out why *zlib inflate* fails.
-- ~~Local message cache using sqlite3/tdbc::sqlite3/tdbc::postgres package.~~
-  Leave message logging up to library users.
-- Use "return -code error -errorcode ..." when possible for standardized
-  exception handling. See ThrowError in websocket from tcllib for an example.
-- Use the *try* command.
-- Create a tcltest custommatch to check -errorcode.
-- Test HTTP API and Gateway API with local server.
-- Change disrest::Send to send JSON payload without http::formatQuery.
-  json::dict2json doesn't work as expected, so types have to be stored.

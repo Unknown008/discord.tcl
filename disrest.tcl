@@ -4,6 +4,7 @@
 #       API.
 #
 # Copyright (c) 2016, Yixin Zhang
+# Copyright (c) 2018-2020, Jerry Yong
 #
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
@@ -20,8 +21,6 @@ package require logger
 namespace eval discord::rest {
     variable log [logger::init discord::rest]
 
-    set HttpApiVersion 6
-
     variable SendId 0
     variable SendInfo [dict create]
 
@@ -29,6 +28,36 @@ namespace eval discord::rest {
     variable SendCount [dict create]
     variable BurstLimitSend 5
     variable BurstLimitPeriod 1
+
+    variable MessageLimits {
+        fields        25
+        name         256
+        title        256
+        value       1024
+        footer      2048
+        description 2048
+        total       6000
+    }
+
+    variable EmbedColours
+    array set EmbedColours {
+        white   ffffff
+        silver  c0c0c0
+        gray    808080
+        black   000000
+        red     ff0000
+        maroon  800000
+        yellow  ffff00
+        olive   808000
+        lime    00ff00
+        green   008000
+        aqua    00ffff
+        teal    008080
+        blue    0000ff
+        navy    000080
+        fuchsia ff00ff
+        purple  800080
+    }
     
     set ::json::write::quotes [list \
         "\"" "\\\"" \\ \\\\ \b \\b \f \\f \n \\n \r \\r \t \\t \
@@ -69,12 +98,13 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
     variable SendCount
     variable BurstLimitSend
     variable BurstLimitPeriod
+    ${log}::info "Sending http request"
     if {$verb ni [list GET POST PUT PATCH DELETE]} {
-        ${log}::error "Send: HTTP method not recognized: '$verb'"
+        ${log}::error "HTTP method not recognized: '$verb'"
         return -code error "Unknown HTTP method: $verb"
     }
 
-    if {[regexp {^(/(?:channels|guilds)/\d+)} $resource -> route]} {
+    if {[regexp {^(/(?:channel|guild)s/\d+)} $resource -> route]} {
         if {![dict exists $SendCount $token $route]} {
             dict set SendCount $token $route 0
             set sendCount 0
@@ -83,10 +113,10 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
         }
         if {$sendCount == 0} {
             after [expr {($BurstLimitPeriod+1) * 1000}] \
-                    [list dict set ::discord::rest::SendCount $token $route 0]
+                [list dict set ::discord::rest::SendCount $token $route 0]
         }
         if {$sendCount >= $BurstLimitSend} {
-            set msg "Internal: Send Reached $BurstLimitSend messages sent in "
+            set msg "Send Reached $BurstLimitSend messages sent in "
             append msg "$BurstLimitPeriod s."
             ${log}::warn $msg
             if {[llength $cmd] > 0} {{*}$cmd {} "Local rate-limit"}
@@ -94,14 +124,14 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
         }
         if {[dict exists $RateLimits $token $route X-RateLimit-Remaining]} {
             set remaining \
-                    [dict get $RateLimits $token $route X-RateLimit-Remaining]
+                [dict get $RateLimits $token $route X-RateLimit-Remaining]
             if {$remaining <= 0} {
                 set resetTime \
-                        [dict get $RateLimits $token $route X-RateLimit-Reset]
+                    [dict get $RateLimits $token $route X-RateLimit-Reset]
                 set secsRemain [expr {$resetTime - [clock seconds]}]
                 if {$secsRemain >= -3} {
-                    set msg "Internal: Send Rate-limited on $route, "
-                    append msg "reset in $secsRemain seconds"
+                    set msg "Send Rate-limited on $route, reset in $secsRemain "
+                    append msg "seconds"
                     ${log}::warn $msg
                     return
                 }
@@ -131,8 +161,7 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
     set callbackName ::discord::rest::SendCallback${sendId}
     interp alias {} $callbackName {} ::discord::rest::SendCallback $sendId
 
-    variable HttpApiVersion
-    set url "$::discord::ApiBaseUrl/v$HttpApiVersion$resource"
+    set url "$::discord::ApiBaseUrl/v$::discord::DiscordApiVersion$resource"
     dict set SendInfo $sendId [dict create cmd $cmd url $url token $token]
     if {[info exists route]} {
         dict set SendInfo $sendId route $route
@@ -145,7 +174,7 @@ proc discord::rest::Send { token verb resource {body {}} {cmd {}} args } {
         lappend command -query $body
     }
     lappend command -command $callbackName
-    ${log}::debug "Send: $command"
+    ${log}::debug $command
     {*}$command
     return
 }
@@ -166,6 +195,7 @@ proc discord::rest::SendCallback { sendId token } {
     variable log
     variable SendInfo
     variable RateLimits
+    ${log}::info "Sending callback"
     interp alias {} ::discord::rest::SendCallback${sendId} {}
     if {[dict exists $SendInfo $sendId route]} {
         set route [dict get $SendInfo $sendId route]
@@ -185,25 +215,23 @@ proc discord::rest::SendCallback { sendId token } {
             foreach header $rates {
                 if {[info exists route] && [info exists meta($header)]} {
                     dict set RateLimits $discordToken $route $header \
-                            $meta($header)
+                        $meta($header)
                 }
             }
             set code [::http::code $token]
             set ncode [::http::ncode $token]
             if {$ncode >= 300} {
-                ${log}::warn [join [list \
-                    "SendCallback${sendId}: $url: $code:" \
-                    [::http::data $token]
-                ]]
+                ${log}::warn [join [list "${sendId}: $url: $code:" \
+                    [::http::data $token]]]
                 if {[llength $cmd] > 0} {
                     after idle [list {*}$cmd {} $state]
                 }
             } else {
-                ${log}::debug "SendCallback${sendId}: $url: $code"
+                ${log}::debug "${sendId}: $url: $code"
                 if {[llength $cmd] > 0} {
                     set data [::http::data $token]
                     if {$data ne {} && [catch {json::json2dict $data} data]} {
-                        ${log}::error "SendCallback${sendId}: $url: $data"
+                        ${log}::error "${sendId}: $url: $data"
                         set data {}
                     }
                     after idle [list {*}$cmd $data $state]
@@ -212,13 +240,13 @@ proc discord::rest::SendCallback { sendId token } {
         }
         error {
             set error [::http::error $token]
-            ${log}::error "SendCallback${sendId}: $url: error: $error"
+            ${log}::error "${sendId}: $url: error: $error"
             if {[llength $cmd] > 0} {
                 after idle [list {*}$cmd {} $state]
             }
         }
         default {
-            ${log}::error "SendCallback${sendId}: $url: $status"
+            ${log}::error "${sendId}: $url: $status"
             if {[llength $cmd] > 0} {
                 after idle [list {*}$cmd {} $state]
             }
@@ -248,6 +276,8 @@ proc discord::rest::SendCallback { sendId token } {
 #       Returns a list containing data and state.
 
 proc discord::rest::CallbackCoroutine { coroutine data state } {
+    variable log
+    ${log}::info "Resuming routine"
     if {[llength [info commands $coroutine]] > 0} {
         after idle $coroutine
         yield
@@ -290,9 +320,13 @@ proc discord::rest::CallbackCoroutine { coroutine data state } {
 #             }
 
 proc discord::rest::DictToJson { data spec {indent false} {level {}}} {
+    variable log
+    variable MessageLimits
+    variable EmbedColours
+    ${log}::info "Converting dict to json"
     ::json::write::indented $indent
     set jsonData [dict create]
-    set embedlen 0
+    set embedLen 0
     dict for {field typeInfo} $spec {
         if {![dict exists $data $field]} {continue}
         lassign $typeInfo type meta
@@ -303,9 +337,13 @@ proc discord::rest::DictToJson { data spec {indent false} {level {}}} {
                 set value [DictToJson $value $meta $indent $level]
             }
             array {
-                if {$field eq "fields" && [llength $value] > 25} {
-                    return -code error \
-                            "Number of fields in embed cannot exceed 25."
+                if {
+                    $field eq "fields" && 
+                    [llength $value] > [dict get $MessageLimits fields]
+                } {
+                    set msg "Number of fields in embed cannot exceed "
+                    append msg "[dict get $MessageLimits fields]."
+                    return -code error $msg
                 }
                 set value [ListToJsonArray $value {*}$meta $level]
             }
@@ -314,64 +352,62 @@ proc discord::rest::DictToJson { data spec {indent false} {level {}}} {
                 switch $field {
                     "name" -
                     "title" {
-                        if {[string length $value] > 256} {
-                        set value [string range $value 0 253]
+                        if {
+                            [string length $value] > 
+                                [dict get $MessageLimits name]
+                        } {
+                            set value [string range $value 0 \
+                                [expr {[dict get $MessageLimits name]-3}
+                            ]
                             regexp {.+(?=\s)} $value value
-                            set value "$value..."
+                            append value ...
                         }
                     }
                     "value" {
-                        if {[string length $value] > 1024} {
-                            set value [string range $value 0 1021]
+                        if {
+                            [string length $value] > 
+                                [dict get $MessageLimits value]
+                        } {
+                            set value [string range $value 0 \
+                                [expr {[dict get $MessageLimits value]-3}
+                            ]
                             regexp {.+(?=\s)} $value value
-                            set value "$value..."
+                            append value ...
                         }
                     }
                     "footer" -
                     "description" {
-                        if {[string length $value] > 2048} {
-                            set value [string range $value 0 2045]
+                        if {
+                            [string length $value] > 
+                                [dict get $MessageLimits footer]
+                        } {
+                            set value [string range $value 0 \
+                                [expr {[dict get $MessageLimits footer]-3}
+                            ]
                             regexp {.+(?=\s)} $value value
-                            set value "$value..."
+                            append value ...
                         }
                     }
                 }
                 if {$level != ""} {
-                    uplevel $level [list incr embedlen [string length $value]]
+                    uplevel $level [list incr embedLen [string length $value]]
                 }
                 set value [::json::write::string $value]
             }
             bare {
                 if {$field eq "color"} {
-                    array set colours {
-                        white   ffffff
-                        silver  c0c0c0
-                        gray    808080
-                        black   000000
-                        red     ff0000
-                        maroon  800000
-                        yellow  ffff00
-                        olive   808000
-                        lime    00ff00
-                        green   008000
-                        aqua    00ffff
-                        teal    008080
-                        blue    0000ff
-                        navy    000080
-                        fuchsia ff00ff
-                        purple  800080
-                    }
                     if {$level != ""} {
                         uplevel $level \
-                                [list incr embedlen [string length $value]]
+                                [list incr embedLen [string length $value]]
                     }
                     if {[regexp -nocase {^[0-9a-f]{1,6}$} $value]} {
                         set value [format %d "0x$value"]
                     } elseif {
-                        [string tolower $value] in [array names colours]
+                        [string tolower $value] in [array names EmbedColours]
                     } {
-                        set value [string tolower $value]
-                        set value [format %d "0x$colours($value)"]
+                        set value [format %d \
+                            [string tolower "0x$EmbedColours($value)"] \
+                        ]
                     }
                 }
             }
@@ -381,9 +417,11 @@ proc discord::rest::DictToJson { data spec {indent false} {level {}}} {
         }
         dict set jsonData $field $value
     }
-    if {$embedlen > 6000} {
-        return -code error \
-                "Total length of embed cannot exceed 6000 characters."
+    if {$embedLen > [dict get $MessageLimits total]} {
+        set msg "Total length of embed cannot exceed "
+        append msg "[dict get $MessageLimits total] characters."
+        return -code error $msg
+            
     }
     return [::json::write::object {*}$jsonData]
 }
@@ -404,6 +442,8 @@ proc discord::rest::DictToJson { data spec {indent false} {level {}}} {
 #       Returns a JSON array.
 
 proc discord::rest::ListToJsonArray {list type {meta {}} {level {}}} {
+    variable log
+    ${log}::info "Converting list to json array"
     set jsonArray [list]
     switch $type {
         object {
@@ -421,14 +461,14 @@ proc discord::rest::ListToJsonArray {list type {meta {}} {level {}}} {
         string {
             foreach element $list {
                 if {$level != ""} {
-                    uplevel $level [list incr embedlen [string length $element]]
+                    uplevel $level [list incr embedLen [string length $element]]
                 }
                 lappend jsonArray [::json::write::string $element]
             }
         }
         bare {
             if {$level != ""} {
-                uplevel $level [list incr embedlen [string length $list]]
+                uplevel $level [list incr embedLen [string length $list]]
             }
             set jsonArray $list
         }

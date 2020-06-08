@@ -4,26 +4,28 @@
 #       the disrest_*.tcl files.
 #
 # Copyright (c) 2016, Yixin Zhang
+# Copyright (c) 2018-2020, Jerry Yong
 #
 # See the file "LICENSE" for information on usage and redistribution of this
 # file.
 
 namespace eval discord {
     namespace export getChannel modifyChannel deleteChannel getMessages \
-            getMessage sendMessage uploadFile editMessage deleteMessage \
-            bulkDeleteMessages editChannelPermissions deleteChannelPermission \
-            getChannelInvites createChannelInvite triggerTyping \
-            getPinnedMessages pinMessage unpinMessage getGuild modifyGuild \
-            getChannels createChannel changeChannelPositions getMember \
-            getMembers addMember modifyMember modifyBotnick addGuildMemberRole \
-            removeGuildMemberRole kickMember getBans ban unban getRoles \
-            createRole batchModifyRoles modifyRole deleteRole getPruneCount \
-            prune getGuildVoiceRegions getGuildInvites getIntegrations \
-            createIntegration modifyIntegration deleteIntegration \
-            syncIntegration getGuildEmbed getGuildVanityUrl modifyGuildEmbed \
-            getAuditLog getCurrentUser getUser modifyCurrentUser getGuilds \
-            leaveGuild getDMs createDM getConnections getVoiceRegions sendDM \
-            closeDM
+        getMessage sendMessage uploadFile editMessage deleteMessage \
+        bulkDeleteMessages editChannelPermissions deleteChannelPermission \
+        getChannelInvites createChannelInvite triggerTyping \
+        getPinnedMessages pinMessage unpinMessage getGuild modifyGuild \
+        getChannels createChannel changeChannelPositions getMember \
+        getMembers addMember modifyMember modifyBotnick addGuildMemberRole \
+        removeGuildMemberRole kickMember getBans ban unban getRoles \
+        createRole batchModifyRoles modifyRole deleteRole getPruneCount \
+        prune getGuildVoiceRegions getGuildInvites getIntegrations \
+        createIntegration modifyIntegration deleteIntegration \
+        syncIntegration getGuildWidget getGuildVanityUrl modifyGuildWidget \
+        getAuditLog getCurrentUser getUser modifyCurrentUser getGuilds \
+        leaveGuild getDMs createDM getConnections getVoiceRegions sendDM \
+        closeDM createReaction deleteOwnReaction deleteReaction getReactions \
+        deleteAllReactions deleteAllReactionsForEmoji
 
     namespace ensemble create
 }
@@ -63,7 +65,7 @@ proc discord::GenApiProc {_name _args _body} {
             set _count [dict get [set ${sessionNs}::WrapperCallCount] $_myName]
             set _coro ${_myName}$_count
             set cmd [list coroutine $_coro discord::rest::CallbackCoroutine \
-                    $_caller]
+                $_caller]
         }
     }
     proc ::discord::$_name $_args "$_setup\n$_body\nreturn \$_coro"
@@ -182,7 +184,7 @@ discord::GenApiProc sendMessage {channelId content} {
 
 discord::GenApiProc uploadFile {channelId filename type file} {
     rest::UploadFile [set ${sessionNs}::token] $channelId $filename $type \
-            $file $cmd
+        $file $cmd
 }
 
 # discord::editMessage --
@@ -198,7 +200,7 @@ discord::GenApiProc uploadFile {channelId filename type file} {
 
 discord::GenApiProc editMessage {channelId messageId content} {
     rest::EditMessage [set ${sessionNs}::token] $channelId $messageId \
-            $content $cmd
+        $content $cmd
 }
 
 # discord::deleteMessage --
@@ -227,7 +229,7 @@ discord::GenApiProc deleteMessage {channelId messageId} {
 
 discord::GenApiProc bulkDeleteMessages {channelId messageIds} {
     rest::BulkDeleteMessages [set ${sessionNs}::token] $channelId \
-            [dict create messages $messageIds] $cmd
+        [dict create messages $messageIds] $cmd
 }
 
 # discord::editChannelPermissions --
@@ -244,7 +246,7 @@ discord::GenApiProc bulkDeleteMessages {channelId messageIds} {
 
 discord::GenApiProc editChannelPermissions {channelId overwriteId data} {
     rest::EditChannelPermissions [set ${sessionNs}::token] $channelId \
-            $overwriteId $data $cmd
+        $overwriteId $data $cmd
 }
 
 # discord::deleteChannelPermission --
@@ -259,7 +261,7 @@ discord::GenApiProc editChannelPermissions {channelId overwriteId data} {
 
 discord::GenApiProc deleteChannelPermission {channelId overwriteId} {
     rest::DeleteChannelPermission [set ${sessionNs}::token] $channelId \
-            $overwriteId $cmd
+        $overwriteId $cmd
 }
 
 # discord::getChannelInvites --
@@ -328,7 +330,7 @@ discord::GenApiProc getPinnedMessages {channelId} {
 
 discord::GenApiProc pinMessage {channelId messageId} {
     rest::AddPinnedChannelMessage [set ${sessionNs}::token] $channelId \
-            $messageId $cmd
+        $messageId $cmd
 }
 
 # discord::unpinMessage --
@@ -343,7 +345,7 @@ discord::GenApiProc pinMessage {channelId messageId} {
 
 discord::GenApiProc unpinMessage {channelId messageId} {
     rest::DeletePinnedChannelMessage [set ${sessionNs}::token] $channelId \
-            $messageId $cmd
+        $messageId $cmd
 }
 
 # discord::getGuild --
@@ -424,7 +426,7 @@ discord::GenApiProc changeChannelPositions {guildId data} {
         set list [dict create id $channelId position $position]
     }]
     rest::ModifyGuildChannelPosition  [set ${sessionNs}::token] $guildId \
-            $positions $cmd
+        $positions $cmd
 }
 
 # discord::getMember --
@@ -456,7 +458,7 @@ discord::GenApiProc getMember {guildId userId} {
 
 discord::GenApiProc getMembers {guildId {limit 1} {after 0}} {
     rest::ListGuildMembers [set ${sessionNs}::token] $guildId \
-            [dict create limit $limit after $after] $cmd
+        [dict create limit $limit after $after] $cmd
 }
 
 # discord::addMember --
@@ -491,7 +493,7 @@ discord::GenApiProc addMember {guildId userId accessToken data} {
 
 discord::GenApiProc modifyMember {guildId userId data} {
     rest::ModifyGuildMember [set ${sessionNs}::token] $guildId $userId $data \
-            $cmd
+        $cmd
 }
 
 # discord::modifyBotnick --
@@ -522,7 +524,7 @@ discord::GenApiProc modifyBotnick {guildId data} {
 
 discord::GenApiProc addGuildMemberRole {guildId userId roleId} {
     rest::AddGuildMemberRole [set ${sessionNs}::token] $guildId $userId \
-            $roleId $cmd
+        $roleId $cmd
 }
 
 # discord::removeGuildMemberRole --
@@ -538,7 +540,7 @@ discord::GenApiProc addGuildMemberRole {guildId userId roleId} {
 
 discord::GenApiProc removeGuildMemberRole {guildId userId data} {
     rest::RemoveGuildMemberRole [set ${sessionNs}::token] $guildId $userId \
-            $roleId $cmd
+        $roleId $cmd
 }
 
 # discord::kickMember --
@@ -581,7 +583,7 @@ discord::GenApiProc getBans {guildId} {
 
 discord::GenApiProc ban {guildId userId {delMsgDays 0}} {
     rest::CreateGuildBan [set ${sessionNs}::token] $guildId $userId \
-            [dict create delete-message-days $delMsgDays] $cmd
+        [dict create delete-message-days $delMsgDays] $cmd
 }
 
 # discord::unban --
@@ -655,7 +657,7 @@ discord::GenApiProc batchModifyRoles {guildId data} {
 
 discord::GenApiProc modifyRole {guildId roleId data} {
     rest::ModifyGuildRole [set ${sessionNs}::token] $guildId $roleId \
-            $data $cmd
+        $data $cmd
 }
 
 # discord::deleteRole --
@@ -684,7 +686,7 @@ discord::GenApiProc deleteRole {guildId roleId} {
 
 discord::GenApiProc getPruneCount {guildId {days 1}} {
     rest::GetGuildPruneCount [set ${sessionNs}::token] $guildId \
-            [dict create days $days] $cmd
+        [dict create days $days] $cmd
 }
 
 # discord::prune --
@@ -699,7 +701,7 @@ discord::GenApiProc getPruneCount {guildId {days 1}} {
 
 discord::GenApiProc prune {guildId {days 1}} {
     rest::BeginGuildPrune [set ${sessionNs}::token] $guildId \
-            [dict create days $days] $cmd
+        [dict create days $days] $cmd
 }
 
 # discord::getGuildVoiceRegions --
@@ -771,7 +773,7 @@ discord::GenApiProc createIntegration {guildId data} {
 
 discord::GenApiProc modifyIntegration {guildId integrationId data} {
     rest::ModifyGuildIntegration [set ${sessionNs}::token] $guildId \
-            $integrationId $data $cmd
+        $integrationId $data $cmd
 }
 
 # discord::deleteIntegration --
@@ -786,7 +788,7 @@ discord::GenApiProc modifyIntegration {guildId integrationId data} {
 
 discord::GenApiProc deleteIntegration {guildId integrationId} {
     rest::DeleteGuildIntegration [set ${sessionNs}::token] $guildId \
-            $integrationId $cmd
+        $integrationId $cmd
 }
 
 # discord::syncIntegration --
@@ -801,20 +803,20 @@ discord::GenApiProc deleteIntegration {guildId integrationId} {
 
 discord::GenApiProc syncIntegration {guildId integrationId} {
     rest::SyncGuildIntegration [set ${sessionNs}::token] $guildId \
-            $integrationId $cmd
+        $integrationId $cmd
 }
 
-# discord::getGuildEmbed --
+# discord::getGuildWidget --
 #
-#      Get the guild embed.
+#      Get the guild widget.
 #
 # Arguments:
 #       sessionNs   Name of session namespace.
 #       guildId     Guild ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc getGuildEmbed {guildId} {
-    rest::GetGuildEmbed [set ${sessionNs}::token] $guildId $cmd
+discord::GenApiProc getGuildWidget {guildId} {
+    rest::GetGuildWidget [set ${sessionNs}::token] $guildId $cmd
 }
 
 # discord::getGuildVanityUrl --
@@ -830,19 +832,19 @@ discord::GenApiProc getGuildVanityUrl {guildId} {
     rest::GetGuildVanityUrl [set ${sessionNs}::token] $guildId $cmd
 }
 
-# discord::modifyGuildEmbed --
+# discord::modifyGuildWidget --
 #
-#      Modify the guild embed.
+#      Modify the guild widget.
 #
 # Arguments:
 #       sessionNs   Name of session namespace.
 #       guildId     Guild ID.
-#       data        Dictionary representing a guild embed JSON object. Each key
+#       data        Dictionary representing a guild widget JSON object. Each key
 #                   if one of enabled, channel_id. All keys are optional.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc modifyGuildEmbed {guildId data} {
-    rest::ModifyGuildEmbed [set ${sessionNs}::token] $guildId $data $cmd
+discord::GenApiProc modifyGuildWidget {guildId data} {
+    rest::ModifyGuildWidget [set ${sessionNs}::token] $guildId $data $cmd
 }
 
 # discord::getAuditLog --
@@ -946,7 +948,7 @@ discord::GenApiProc getDMs {} {
 
 discord::GenApiProc createDM {userId} {
     rest::CreateDM [set ${sessionNs}::token] \
-            [dict create recipient_id $userId] $cmd
+        [dict create recipient_id $userId] $cmd
 }
 
 # discord::getConnections --
@@ -979,7 +981,7 @@ discord::GenApiProc getVoiceRegions {} {
 #
 # Arguments:
 #       sessionNs   Name of session namespace.
-#       userId      userId
+#       channelId   Channel ID.
 #       content     Message content.
 #       getResult   See "Shared Arguments".
 #
@@ -987,27 +989,8 @@ discord::GenApiProc getVoiceRegions {} {
 #       See "Shared Results". Also raises an exception if a DM channel is not
 #       opened for the user.
 
-proc discord::sendDM {sessionNs userId content {getResult 0}} {
-    variable log
-    set channelId {}
-    dict for {id dmChan} [set ${sessionNs}::dmChannels] {
-        set recipients [dict get $dmChan recipients]
-        if {[llength $recipients] > 1} {
-            continue
-        }
-        if {[dict get [lindex $recipients 0] id] eq $userId} {
-            set channelId [dict get $dmChan id]
-            break
-        }
-    }
-    if {$channelId ne {}} {
-        set count [incr ${sessionNs}::sendDMCount]
-        return [uplevel [list ::discord::sendMessage $sessionNs $channelId \
-                $content $getResult]]
-    } else {
-        ${log}::log "sendDM: DM channel not found for user: $userId"
-        return -code error "DM channel not found for user: $userId"
-    }
+discord::GenApiProc sendDM {channelId content} {    
+    ::rest::CreateMessage [set ${sessionNs}::token] $channelId $content $cmd
 }
 
 # discord::closeDM --
@@ -1016,20 +999,106 @@ proc discord::sendDM {sessionNs userId content {getResult 0}} {
 #
 # Arguments:
 #       sessionNs   Name of session namespace.
-#       userId      User ID.
+#       channelId   Channel ID.
 #       getResult   See "Shared Arguments".
 
-discord::GenApiProc closeDM {userId} {
-    set channelId {}
-    dict for {id dmChan} [set ${sessionNs}::dmChannels] {
-        set recipients [dict get $dmChan recipients]
-        if {[llength $recipients] > 1} {
-            continue
-        }
-        if {[dict get [lindex $recipients 0] id] eq $userId} {
-            set channelId [dict get $dmChan id]
-            break
-        }
-    }
+discord::GenApiProc closeDM {channelId} {
     rest::DeleteChannel [set ${sessionNs}::token] $channelId $cmd
+}
+
+# discord::createReaction --
+#
+#       Adds a reaction to a message.
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       emoji       The emoji to add.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc createReaction {channelId messageId emoji} {
+    rest::CreateReaction [set ${sessionNs}::token] $channelId $messageId \
+        $emoji $cmd
+}
+
+# discord::deleteOwnReaction --
+#
+#       Deletes own reaction to a message
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       emoji       The emoji to add.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc deleteOwnReaction {channelId messageId emoji} {
+    rest::DeleteOwnReaction [set ${sessionNs}::token] $channelId $messageId \
+        $emoji $cmd
+}
+
+# discord::deleteReaction --
+#
+#       Deletes a reaction to a message (Requires MANAGE_MESSAGES permission)
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       emoji       The emoji to add.
+#       userId      The user ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc deleteReaction {channelId messageId emoji userId} {
+    rest::DeleteReaction [set ${sessionNs}::token] $channelId $messageId \
+        $emoji $userId $cmd
+}
+
+# discord::getReactions --
+#
+#       Gets the users who added the emoji to a certain message
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       emoji       The emoji to add.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc getReactions {channelId messageId emoji} {
+    rest::GetReactions [set ${sessionNs}::token] $channelId $messageId \
+        $emoji $cmd
+}
+
+# discord::deleteAllReactions --
+#
+#       Deletes all reactions on a message (requires MANAGE_MESSAGES permission)
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc deleteAllReactions {channelId messageId} {
+    rest::DeleteAllReactions [set ${sessionNs}::token] $channelId $messageId \
+        $cmd
+}
+
+# discord::deleteAllReactionsForEmoji --
+#
+#       Deletes all reactions on a message (requires MANAGE_MESSAGES permission)
+#       for a certain emoji
+#
+# Arguments:
+#       sessionNs   Name of session namespace.
+#       channelId   Channel ID.
+#       messageId   Message ID.
+#       emoji       The emoji.
+#       getResult   See "Shared Arguments".
+
+discord::GenApiProc deleteAllReactionsForEmoji {channelId messageId emoji} {
+    rest::DeleteAllReactionsForEmoji [set ${sessionNs}::token] $channelId \
+        $messageId $emoji $cmd
 }
