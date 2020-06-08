@@ -9,6 +9,7 @@
 # full path name of this file's directory.
 
 package ifneeded discord 0.7.0 "
+    source [file join $dir discord.tcl] ;
     source [file join $dir gateway.tcl] ;
     source [file join $dir callback.tcl] ;
     source [file join $dir disrest.tcl] ;
@@ -22,5 +23,4 @@ package ifneeded discord 0.7.0 "
     source [file join $dir permissions.tcl] ;
     source [file join $dir snowflake.tcl] ;
     source [file join $dir message_formatting.tcl] ;
-    source [file join $dir discord.tcl] ;
 "
