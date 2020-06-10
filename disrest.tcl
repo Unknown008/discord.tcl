@@ -277,7 +277,7 @@ proc discord::rest::SendCallback { sendId token } {
 
 proc discord::rest::CallbackCoroutine { coroutine data state } {
     variable log
-    ${log}::info "Resuming routine"
+    ${log}::info "Resuming coroutine"
     if {[llength [info commands $coroutine]] > 0} {
         after idle $coroutine
         yield

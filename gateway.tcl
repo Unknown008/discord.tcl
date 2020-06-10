@@ -711,7 +711,7 @@ proc discord::gateway::Handler {sock type msg} {
             variable Gateways
             variable GatewayCloseEventCodes
             ${log}::notice "Disconnected from $sock"
-            if {$GatewayCloseEventCode ni [dict keys $RpcCloseEventCodes]} {
+            if {$GatewayCloseEventCode ni [dict keys $GatewayCloseEventCodes]} {
                 set interval [GetGatewayInfo $sock heartbeat_interval]
                 set gatewayNs [dict get $Gateways $sock]
                 set sessionNs ::discord::session::[expr {
