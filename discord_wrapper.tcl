@@ -990,7 +990,7 @@ discord::GenApiProc getVoiceRegions {} {
 #       opened for the user.
 
 discord::GenApiProc sendDM {channelId content} {    
-    ::rest::CreateMessage [set ${sessionNs}::token] $channelId $content $cmd
+    rest::CreateMessage [set ${sessionNs}::token] $channelId $content $cmd
 }
 
 # discord::closeDM --

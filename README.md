@@ -9,7 +9,6 @@ Supports Discord Gateway API version 6.
   the heartbeat interval from the HELLO payload and ignoring HEARTBEAT and 
   HEARTBEAT_ACK altogether. The bot still runs fine because it will attempt to 
   reconnect on the next failed HEARTBEAT *sent*.
-- [Gateway Intents](https://discord.com/developers/docs/topics/gateway#gateway-intents) not implemented yet.
 - Need to do a full review on [Rate Limits](https://discord.com/developers/docs/topics/gateway#rate-limiting).
 - Basic sharding is currently implemented. It ain't broke per se, so not fixing 
   it for now. Also includes [this](https://discord.com/developers/docs/topics/gateway#get-gateway-bot).

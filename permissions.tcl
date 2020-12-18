@@ -99,7 +99,7 @@ namespace eval discord {
         MANAGE_WEBHOOKS         0x20000000  {
             Allows management and editing of webhooks.
         }
-        MANAGE_EMOJIS            0x10000000  {
+        MANAGE_EMOJIS           0x40000000  {
             Allows management and editing of emojis.
         }
     }

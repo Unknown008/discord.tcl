@@ -215,7 +215,6 @@ proc discord::callback::event::Guild {sessionNs event data} {
                 set userData [guild eval {
                     SELECT data FROM users WHERE userId = :userId
                 }]
-                set exists $userData
                 if {$userData == ""} {
                     dict for {field value} $user {
                         dict set userData $field $value
